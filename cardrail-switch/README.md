@@ -151,7 +151,7 @@ timestamp and body. The switch listens on HTTP 8080 and on ISO 8583 TCP 8583 (lo
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
-cd /Users/mac/cardrail
+cd cardrail
 mvn -q -pl cardrail-switch -DskipTests package
 java -jar cardrail-switch/target/cardrail-switch-0.1.0-SNAPSHOT.jar --spring.profiles.active=dev
 ```
@@ -233,7 +233,7 @@ curl -s -X DELETE localhost:8080/dev/issuer/faults   # back to configured settin
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
-cd /Users/mac/cardrail
+cd cardrail
 mvn -q -B -o -pl cardrail-switch verify                       # everything
 mvn -B -o -pl cardrail-switch test -Dtest=ConcurrencyIntegrationTest
 mvn -B -o -pl cardrail-switch test -Dtest=CucumberSuiteTest   # BDD only; report in target/cucumber-report.html

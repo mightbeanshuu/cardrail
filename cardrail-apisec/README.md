@@ -135,6 +135,6 @@ The code was read from the `-sources.jar` that Maven Central publishes for exact
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
-cd /Users/mac/cardrail
+cd cardrail
 mvn -q -B -pl cardrail-apisec verify      # add -o once the Mastercard jars are in ~/.m2
 ```

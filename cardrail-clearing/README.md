@@ -133,7 +133,7 @@ Kafka is optional for the REST API; without a broker the listener just logs conn
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
-cd /Users/mac/cardrail
+cd cardrail
 mvn -q -pl cardrail-clearing -DskipTests package
 java -jar cardrail-clearing/target/cardrail-clearing-0.1.0-SNAPSHOT.jar \
      --spring.kafka.bootstrap-servers=localhost:9092

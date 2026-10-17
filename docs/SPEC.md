@@ -1,7 +1,6 @@
-# cardrail: build spec (internal contract for all modules)
+# cardrail: module specification
 
-This file is the contract between modules. Code against it. If something here is wrong or missing,
-report it; do not silently diverge.
+The contract between modules: message formats, response codes and the switch's domain rules.
 
 ## What cardrail is
 
@@ -31,22 +30,20 @@ reproduce them.
 
 ## Tech baseline
 
-Java 21 (records, sealed interfaces, pattern matching, virtual threads). Maven multi-module.
-Spring Boot 3.5.16 (only in cardrail-switch). PostgreSQL 17 + Redis are running locally via brew
-(`localhost:5432`, user `mac`, no password; `localhost:6379`). There is NO Docker, so no Testcontainers.
-Kafka tests use `spring-kafka-test` EmbeddedKafka. Package root: `dev.cardrail`.
+Java 21 (records, sealed interfaces, pattern matching, virtual threads), Maven multi-module,
+Spring Boot 3.5. PostgreSQL 17 and Redis for the switch; Kafka via `spring-kafka`, tested with
+`spring-kafka-test` EmbeddedKafka. Package root: `dev.cardrail`. Build and test a module with
+`mvn -pl <module> -am verify`.
 
-Build: `export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` then
-`mvn -q -pl <module> verify` from `/Users/mac/cardrail`.
+## Module dependencies
 
-## Module ownership (strict)
-
-| Module | Owner | Depends on |
-|---|---|---|
-| `cardrail-iso8583` | codec agent | nothing (JDK only) |
-| `cardrail-vault` | vault agent | nothing (JDK only) |
-| `cardrail-switch` | switch agent | NOTHING from the other two during development: it defines its own ports; the orchestrator wires adapters later |
-| root `pom.xml`, `docs/SPEC.md`, `README.md`, `.github/` | orchestrator | read-only for agents |
+| Module | Depends on |
+|---|---|
+| `cardrail-iso8583` | nothing (JDK only) |
+| `cardrail-vault` | nothing (JDK only) |
+| `cardrail-gateway` | `cardrail-iso8583` |
+| `cardrail-switch` | `cardrail-vault`, `cardrail-gateway`, through its own ports (`CardTokenizer`, `IssuerGateway`) so the domain never depends on an adapter |
+| `cardrail-clearing` | nothing from the other modules; it shares only the event contract in `CONTRACTS.md` |
 
 ## ISO 8583 subset (cardrail-iso8583)
 
