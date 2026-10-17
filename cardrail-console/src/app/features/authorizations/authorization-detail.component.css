@@ -1,0 +1,86 @@
+.id {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.amount {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.divider {
+  width: 100%;
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.timeline {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 10px;
+}
+
+.timeline__step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 16px;
+  bottom: -14px;
+  width: 2px;
+  background: var(--border);
+}
+
+.timeline__marker {
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border: 2px solid var(--success);
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.timeline__step--failed .timeline__marker {
+  border-color: var(--danger);
+  background: var(--danger);
+  border-radius: 2px;
+}
+
+.timeline__step--pending .timeline__marker {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+
+.timeline__label {
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

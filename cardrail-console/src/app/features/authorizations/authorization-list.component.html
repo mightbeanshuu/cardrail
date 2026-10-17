@@ -1,0 +1,196 @@
+<div class="page">
+  <div class="page__header">
+    <h1 tabindex="-1">Authorizations</h1>
+    <p class="page__subtitle">Times in UTC</p>
+  </div>
+
+  <section class="panel" aria-labelledby="filters-heading">
+    <h2 id="filters-heading" class="sr-only">Filters</h2>
+    <form class="filters" role="search" aria-label="Filter authorizations" [formGroup]="form" (ngSubmit)="apply()" novalidate>
+      <div class="field">
+        <label for="f-status">Status</label>
+        <select id="f-status" class="select" formControlName="status">
+          <option value="">Any</option>
+          @for (s of statuses; track s) {
+            <option [value]="s">{{ s.charAt(0) + s.slice(1).toLowerCase() }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="f-rc">Response code</label>
+        <select id="f-rc" class="select" formControlName="responseCode">
+          <option value="">Any</option>
+          @for (rc of responseCodes; track rc.code) {
+            <option [value]="rc.code">{{ rc.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="f-merchant">Merchant ID</label>
+        <input id="f-merchant" class="input" formControlName="merchantId" autocomplete="off" spellcheck="false"
+               maxlength="32" [attr.aria-invalid]="invalid('merchantId')"
+               [attr.aria-describedby]="invalid('merchantId') ? 'f-merchant-err' : null" />
+        @if (invalid('merchantId')) {
+          <p id="f-merchant-err" class="field__error">
+            {{ form.controls.merchantId.hasError('pan') ? 'That looks like a card number. Search by last 4 instead.' : 'Letters, digits, space, dot, dash or underscore.' }}
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="f-last4">Card last 4</label>
+        <input id="f-last4" class="input input--narrow" formControlName="last4" inputmode="numeric" maxlength="4"
+               autocomplete="off" [attr.aria-invalid]="invalid('last4')"
+               [attr.aria-describedby]="invalid('last4') ? 'f-last4-err' : null" />
+        @if (invalid('last4')) {
+          <p id="f-last4-err" class="field__error">Exactly 4 digits.</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="f-stip">Stand-in</label>
+        <select id="f-stip" class="select" formControlName="standIn">
+          <option value="">Any</option>
+          <option value="true">Yes (STIP)</option>
+          <option value="false">No</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="f-from">From (UTC)</label>
+        <input id="f-from" class="input" type="date" formControlName="from" />
+      </div>
+
+      <div class="field">
+        <label for="f-to">To (UTC)</label>
+        <input id="f-to" class="input" type="date" formControlName="to"
+               [attr.aria-invalid]="form.hasError('range')"
+               [attr.aria-describedby]="form.hasError('range') ? 'f-range-err' : null" />
+        @if (form.hasError('range')) {
+          <p id="f-range-err" class="field__error">Must be on or after From.</p>
+        }
+      </div>
+
+      <div class="filters__actions">
+        <button type="button" class="btn" (click)="clearFilters()" [disabled]="!filtersActive()">Clear</button>
+        <button type="submit" class="btn btn--primary">Apply</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="results-heading">
+    <div class="panel__header">
+      <h2 id="results-heading">Results</h2>
+      <p class="muted" aria-hidden="true">
+        @if (range(); as r) {
+          @if (r.total > 0) { {{ r.first }}–{{ r.last }} of {{ r.total }} }
+        }
+      </p>
+    </div>
+    <p class="sr-only" aria-live="polite">{{ announcement() }}</p>
+
+    <div class="table-wrap">
+      <table class="table" [attr.aria-busy]="state().status === 'loading'">
+        <caption class="sr-only">Authorizations, newest first</caption>
+        <thead>
+          <tr>
+            <th scope="col" aria-sort="descending" title="Newest first">
+              Time <span aria-hidden="true">↓</span>
+            </th>
+            <th scope="col">ID</th>
+            <th scope="col">Card</th>
+            <th scope="col" class="num">Amount</th>
+            <th scope="col">MCC</th>
+            <th scope="col">Merchant</th>
+            <th scope="col">Response</th>
+            <th scope="col">Status</th>
+            <th scope="col">Stand-in</th>
+          </tr>
+        </thead>
+        <tbody>
+          @switch (state().status) {
+            @case ('loading') {
+              @for (i of skeletonRows; track i) {
+                <tr class="skeleton-row" aria-hidden="true">
+                  @for (c of [1, 2, 3, 4, 5, 6, 7, 8, 9]; track c) {
+                    <td><span class="skeleton"></span></td>
+                  }
+                </tr>
+              }
+            }
+            @case ('error') {
+              <tr class="table__state">
+                <td colspan="9">
+                  <p>Authorizations could not be loaded.</p>
+                  <button type="button" class="btn btn--sm" (click)="retry()">Retry</button>
+                </td>
+              </tr>
+            }
+          }
+          @if (state(); as s) {
+            @if (s.status === 'ok') {
+              @for (a of s.data.items; track a.id) {
+                <tr>
+                  <td class="mono nowrap">{{ a.createdAt | utc }}</td>
+                  <td class="mono">
+                    <a [routerLink]="['/authorizations', a.id]" [attr.aria-label]="'Authorization ' + a.id">{{ a.id.slice(0, 8) }}</a>
+                  </td>
+                  <td class="mono nowrap">{{ a.maskedPan | maskedPan }}</td>
+                  <td class="num">{{ a.amountMinor | money: a.currency }}</td>
+                  <td class="mono">{{ a.mcc }}</td>
+                  <td>
+                    <span class="mono">{{ a.merchantId }}</span>
+                    @if (a.merchantName) {
+                      <span class="cell-sub" [title]="a.merchantName">{{ a.merchantName }}</span>
+                    }
+                  </td>
+                  <td><app-response-code [code]="a.responseCode" /></td>
+                  <td><app-status-chip [status]="a.status" /></td>
+                  <td><app-stip-badge [standIn]="a.standIn" /></td>
+                </tr>
+              } @empty {
+                <tr class="table__state">
+                  <td colspan="9">
+                    @if (filtersActive()) {
+                      <p>No authorizations match these filters.</p>
+                      <button type="button" class="btn btn--sm" (click)="clearFilters()">Clear filters</button>
+                    } @else {
+                      <p>No authorizations yet.</p>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (range(); as r) {
+      @if (r.total > 0) {
+        <nav class="pager" aria-label="Pagination">
+          <div class="row">
+            <label for="page-size" class="muted">Rows per page</label>
+            <select id="page-size" class="select" [value]="query().size" (change)="setPageSize($any($event.target).value)">
+              @for (n of pageSizes; track n) {
+                <option [value]="n" [selected]="n === query().size">{{ n }}</option>
+              }
+            </select>
+          </div>
+          <div class="pager__controls">
+            <span class="muted">Page {{ query().page + 1 }} of {{ r.pages }}</span>
+            <button type="button" class="btn btn--sm" (click)="goToPage(query().page - 1)" [disabled]="query().page === 0">
+              Previous
+            </button>
+            <button type="button" class="btn btn--sm" (click)="goToPage(query().page + 1)"
+                    [disabled]="query().page + 1 >= r.pages">
+              Next
+            </button>
+          </div>
+        </nav>
+      }
+    }
+  </section>
+</div>

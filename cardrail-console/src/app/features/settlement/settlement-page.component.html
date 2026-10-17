@@ -1,0 +1,204 @@
+<div class="page">
+  <div class="page__header">
+    <h1 tabindex="-1">Settlement</h1>
+    <form class="date-form" (submit)="$event.preventDefault(); showDate()" novalidate aria-label="Choose business date">
+      <div class="field">
+        <label for="business-date">Business date (UTC)</label>
+        <input id="business-date" class="input" type="date" [formControl]="dateControl" required />
+      </div>
+      <button type="submit" class="btn">Show</button>
+    </form>
+  </div>
+
+  <section class="panel" aria-labelledby="run-h">
+    <div class="panel__header">
+      <h2 id="run-h">Settlement run for <span class="mono">{{ businessDate() }}</span></h2>
+      <div class="row">
+        <button #runButton type="button" class="btn btn--primary"
+                [disabled]="running() || run().status === 'loading'" (click)="confirmRun.open(runButton)">
+          {{ running() ? 'Running…' : currentRun() ? 'Run again' : 'Run settlement' }}
+        </button>
+        <button type="button" class="btn" [disabled]="!currentRun() || downloading()" (click)="downloadCsv()">
+          {{ downloading() ? 'Downloading…' : 'Download CSV' }}
+        </button>
+      </div>
+    </div>
+    <div class="panel__body" aria-live="polite">
+      @switch (run().status) {
+        @case ('loading') {
+          <p class="muted" role="status">Loading run…</p>
+        }
+        @case ('error') {
+          <p>The settlement run could not be loaded.</p>
+        }
+        @case ('ok') {
+          @if (currentRun(); as r) {
+            <div class="run-summary">
+              <app-chip [tone]="runTone(r.status)">{{ runLabel(r.status) }}</app-chip>
+              @if (r.recordCount != null) {
+                <span><span class="muted">Records</span> <span class="num">{{ r.recordCount }}</span></span>
+              }
+              <span><span class="muted">Started</span> <span class="mono">{{ r.startedAt | utc }}</span></span>
+              <span><span class="muted">Finished</span> <span class="mono">{{ r.finishedAt | utc }}</span></span>
+            </div>
+            @if (r.failure) {
+              <p class="run-failure"><strong>Failure:</strong> {{ r.failure }}. Run the same date again to resume.</p>
+            }
+          } @else {
+            <p class="muted">No settlement run for this date yet. Running it is idempotent: repeating it for the same date returns the same result.</p>
+          }
+        }
+      }
+    </div>
+  </section>
+
+  @if (currentRun()) {
+    <section class="panel" aria-labelledby="positions-h">
+      <div class="panel__header">
+        <h2 id="positions-h">Net positions</h2>
+        @if (totals().length > 0) {
+          @if (balanced()) {
+            <app-chip tone="success">Reconciled: totals are zero</app-chip>
+          } @else {
+            <app-chip tone="danger">Out of balance</app-chip>
+          }
+        }
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Net settlement positions; positive receives, negative pays</caption>
+          <thead>
+            <tr>
+              <th scope="col">Party</th>
+              <th scope="col">ID</th>
+              <th scope="col">Currency</th>
+              <th scope="col" class="num">Records</th>
+              <th scope="col" class="num">Gross</th>
+              <th scope="col" class="num">Interchange</th>
+              <th scope="col" class="num">Net position</th>
+              <th scope="col">Direction</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of positions(); track p.partyType + p.partyId + p.currency) {
+              <tr>
+                <td>{{ partyLabel(p.partyType) }}</td>
+                <td class="mono">{{ p.partyId }}</td>
+                <td class="mono">{{ currencyCode(p.currency) }}</td>
+                <td class="num">{{ p.recordCount ?? '—' }}</td>
+                <td class="num">{{ p.grossMinor | money: p.currency }}</td>
+                <td class="num">{{ p.interchangeMinor | money: p.currency }}</td>
+                <td class="num">{{ p.netMinor | money: p.currency }}</td>
+                <td>{{ p.netMinor > 0 ? 'Receives' : p.netMinor < 0 ? 'Pays' : 'Flat' }}</td>
+              </tr>
+            } @empty {
+              <tr class="table__state"><td colspan="8"><p>The run produced no positions.</p></td></tr>
+            }
+          </tbody>
+          @if (totals().length > 0) {
+            <tfoot>
+              @for (t of totals(); track t.currency) {
+                <tr>
+                  <th scope="row" colspan="6">Reconciliation total ({{ currencyCode(t.currency) }})</th>
+                  <td class="num">{{ toNumber(t.totalMinor) | money: t.currency }}</td>
+                  <td>
+                    @if (t.balanced) {
+                      <app-chip tone="success">Balanced</app-chip>
+                    } @else {
+                      <app-chip tone="danger">Not zero</app-chip>
+                    }
+                  </td>
+                </tr>
+              }
+            </tfoot>
+          }
+        </table>
+      </div>
+    </section>
+  }
+
+  <section class="panel" aria-labelledby="records-h">
+    <div class="panel__header">
+      <h2 id="records-h">Clearing records</h2>
+      @if (recordsRange(); as r) {
+        @if (r.total > 0) {
+          <p class="muted">{{ r.first }}–{{ r.last }} of {{ r.total }}</p>
+        }
+      }
+    </div>
+    <div class="table-wrap">
+      <table class="table" [attr.aria-busy]="records().status === 'loading'">
+        <caption class="sr-only">Clearing records for {{ businessDate() }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Occurred (UTC)</th>
+            <th scope="col">Authorization</th>
+            <th scope="col">Type</th>
+            <th scope="col">Card</th>
+            <th scope="col" class="num">Amount</th>
+            <th scope="col" class="num">Interchange</th>
+            <th scope="col">MCC</th>
+            <th scope="col">Merchant</th>
+            <th scope="col">Acquirer</th>
+            <th scope="col">Issuer BIN</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (records(); as rs) {
+            @if (rs.status === 'loading') {
+              <tr class="table__state"><td colspan="11"><p role="status">Loading records…</p></td></tr>
+            } @else if (rs.status === 'error') {
+              <tr class="table__state"><td colspan="11"><p>Clearing records could not be loaded.</p></td></tr>
+            } @else if (rs.status === 'ok') {
+              @for (c of rs.data.items; track c.id) {
+                <tr>
+                  <td class="mono nowrap">{{ (c.occurredAt ?? c.createdAt) | utc }}</td>
+                  <td class="mono">
+                    <a [routerLink]="['/authorizations', c.authorizationId]" [attr.aria-label]="'Authorization ' + c.authorizationId">
+                      {{ c.authorizationId.slice(0, 8) }}
+                    </a>
+                  </td>
+                  <td>{{ c.recordType }}</td>
+                  <td class="mono nowrap">{{ c.maskedPan | maskedPan }}</td>
+                  <td class="num">{{ c.amountMinor | money: c.currency }}</td>
+                  <td class="num">
+                    {{ c.interchangeFeeMinor | money: c.currency }}
+                    @if (c.interchangeCategory) {
+                      <span class="cell-sub">{{ c.interchangeCategory }}</span>
+                    }
+                  </td>
+                  <td class="mono">{{ c.mcc ?? '—' }}</td>
+                  <td class="mono">{{ c.merchantId ?? '—' }}</td>
+                  <td class="mono">{{ c.acquirerId ?? '—' }}</td>
+                  <td class="mono">{{ c.issuerBin ?? '—' }}</td>
+                  <td>{{ c.status ?? '—' }}</td>
+                </tr>
+              } @empty {
+                <tr class="table__state"><td colspan="11"><p>No clearing records for this date.</p></td></tr>
+              }
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (recordsRange(); as r) {
+      @if (r.pages > 1) {
+        <nav class="pager" aria-label="Clearing records pagination">
+          <span class="muted">Page {{ recordsPage() + 1 }} of {{ r.pages }}</span>
+          <div class="pager__controls">
+            <button type="button" class="btn btn--sm" [disabled]="recordsPage() === 0" (click)="goToRecordsPage(recordsPage() - 1)">Previous</button>
+            <button type="button" class="btn btn--sm" [disabled]="recordsPage() + 1 >= r.pages" (click)="goToRecordsPage(recordsPage() + 1)">Next</button>
+          </div>
+        </nav>
+      }
+    }
+  </section>
+
+  <app-confirm-dialog #confirmRun heading="Run settlement?" confirmLabel="Run settlement" (confirmed)="runSettlement()">
+    <p>
+      Runs the end-of-day job for <strong class="mono">{{ businessDate() }}</strong>: clears captured transactions,
+      computes interchange and produces net positions. Repeating it for the same date is safe.
+    </p>
+  </app-confirm-dialog>
+</div>

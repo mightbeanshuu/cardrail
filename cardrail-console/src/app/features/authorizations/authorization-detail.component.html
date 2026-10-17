@@ -1,0 +1,170 @@
+<div class="page">
+  <p><a routerLink="/authorizations">← Authorizations</a></p>
+
+  @switch (state().status) {
+    @case ('loading') {
+      <h1 tabindex="-1">Authorization</h1>
+      <p class="muted" role="status">Loading…</p>
+    }
+    @case ('error') {
+      <h1 tabindex="-1">Authorization</h1>
+      @if (loadError()?.isNotFound) {
+        <div class="banner banner--info" role="status">
+          <p>No authorization with id <code>{{ id() }}</code>.</p>
+        </div>
+      } @else {
+        <div class="stack">
+          <p>The authorization could not be loaded.</p>
+          <p><button type="button" class="btn btn--sm" (click)="retry()">Retry</button></p>
+        </div>
+      }
+    }
+  }
+
+  @if (auth(); as a) {
+    <div class="page__header">
+      <div class="row">
+        <h1 tabindex="-1">Authorization <span class="mono id">{{ a.id }}</span></h1>
+      </div>
+      <div class="row">
+        <app-status-chip [status]="a.status" />
+        @if (a.standIn) {
+          <app-stip-badge [standIn]="true" />
+        }
+      </div>
+    </div>
+
+    @if (outcome(); as o) {
+      <div #outcomeEl tabindex="-1" role="status" [class]="'banner banner--' + o.tone">
+        <p>{{ o.text }}</p>
+      </div>
+    }
+
+    <div class="detail-grid">
+      <section class="panel" aria-labelledby="summary-h">
+        <div class="panel__header"><h2 id="summary-h">Summary</h2></div>
+        <div class="panel__body">
+          <dl class="dl">
+            <dt>Amount</dt>
+            <dd class="amount">{{ a.amountMinor | money: a.currency }}</dd>
+            <dt>Captured</dt>
+            <dd class="tabular">{{ a.capturedAmountMinor === null ? '—' : (a.capturedAmountMinor | money: a.currency) }}</dd>
+            <dt>Response</dt>
+            <dd><app-response-code [code]="a.responseCode" /></dd>
+            <dt>Auth code</dt>
+            <dd class="mono">{{ a.authCode ?? '—' }}</dd>
+            <dt>Decided by</dt>
+            <dd>{{ a.standIn ? 'Stand-in processing (switch)' : 'Issuer' }}</dd>
+            <dt>Decline reason</dt>
+            <dd>{{ a.declineReason ?? '—' }}</dd>
+            <dt>Currency</dt>
+            <dd class="mono">{{ a.currency }}</dd>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="card-h">
+        <div class="panel__header"><h2 id="card-h">Card and merchant</h2></div>
+        <div class="panel__body">
+          <dl class="dl">
+            <dt>Card</dt>
+            <dd class="mono">{{ a.maskedPan | maskedPan }}</dd>
+            <dt>Token</dt>
+            <dd class="mono">{{ a.token ?? '—' }}</dd>
+            <dt>Merchant</dt>
+            <dd><span class="mono">{{ a.merchantId }}</span>@if (a.merchantName) { · {{ a.merchantName }} }</dd>
+            <dt>MCC</dt>
+            <dd class="mono">{{ a.mcc }}</dd>
+            <dt>Acquirer ID</dt>
+            <dd class="mono">{{ a.acquirerId }}</dd>
+            <dt>Terminal ID</dt>
+            <dd class="mono">{{ a.terminalId }}</dd>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="keys-h">
+        <div class="panel__header"><h2 id="keys-h">Message keys</h2></div>
+        <div class="panel__body">
+          <dl class="dl">
+            <dt>STAN</dt>
+            <dd class="mono">{{ a.stan }}</dd>
+            <dt>RRN</dt>
+            <dd class="mono">{{ a.rrn }}</dd>
+            <dt><abbr title="ISO 8583 field 7, MMDDhhmmss">Transmission time</abbr></dt>
+            <dd class="mono">{{ a.transmissionDateTime ?? '—' }}</dd>
+            <dt>Created (UTC)</dt>
+            <dd class="mono">{{ a.createdAt | utc }}</dd>
+            <dt>Captured (UTC)</dt>
+            <dd class="mono">{{ a.capturedAt | utc }}</dd>
+            <dt>Reversed (UTC)</dt>
+            <dd class="mono">{{ a.reversedAt | utc }}</dd>
+            <dt>Expired (UTC)</dt>
+            <dd class="mono">{{ a.expiredAt | utc }}</dd>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="timeline-h">
+        <div class="panel__header"><h2 id="timeline-h">Timeline</h2></div>
+        <div class="panel__body">
+          <ol class="timeline">
+            @for (step of timeline(); track $index) {
+              <li [class]="'timeline__step timeline__step--' + step.tone">
+                <span class="timeline__marker" aria-hidden="true"></span>
+                <div>
+                  <p class="timeline__label">
+                    {{ step.label }}
+                    @if (step.tone === 'pending') { <span class="sr-only">(pending)</span> }
+                    @if (step.tone === 'failed') { <span class="sr-only">(declined)</span> }
+                  </p>
+                  @if (step.at) {
+                    <p class="mono muted"><time [attr.datetime]="step.at">{{ step.at | utc }}</time> UTC</p>
+                  }
+                  <p class="muted">{{ step.detail }}</p>
+                </div>
+              </li>
+            }
+          </ol>
+        </div>
+      </section>
+
+      <section class="panel actions" aria-labelledby="actions-h">
+        <div class="panel__header"><h2 id="actions-h">Actions</h2></div>
+        <div class="panel__body stack">
+          @if (actionBlockedReason(); as reason) {
+            <p id="actions-blocked" class="muted">{{ reason }}</p>
+          }
+          <div class="stack">
+            <h3>Reverse</h3>
+            <p class="muted">Releases the full hold back to the cardholder. Repeating a reversal is safe.</p>
+            <p>
+              <button #reverseButton type="button" class="btn btn--danger"
+                      [disabled]="!!actionBlockedReason()"
+                      [attr.aria-describedby]="actionBlockedReason() ? 'actions-blocked' : null"
+                      (click)="askReverse(reverseButton)">
+                {{ busy() === 'reverse' ? 'Reversing…' : 'Reverse…' }}
+              </button>
+            </p>
+          </div>
+          <hr class="divider" />
+          <app-capture-form
+            [authorizedMinor]="a.amountMinor"
+            [currency]="a.currency"
+            [disabledReason]="actionBlockedReason()"
+            [busy]="busy() === 'capture'"
+            (capture)="capture($event)" />
+        </div>
+      </section>
+    </div>
+
+    <app-confirm-dialog #confirmReverse heading="Reverse this authorization?" confirmLabel="Reverse" [danger]="true"
+                        (confirmed)="reverse()">
+      <p>
+        The hold of <strong class="tabular">{{ a.amountMinor | money: a.currency }}</strong> on card
+        <span class="mono">{{ a.maskedPan | maskedPan }}</span> is released and the authorization cannot be captured
+        afterwards.
+      </p>
+    </app-confirm-dialog>
+  }
+</div>

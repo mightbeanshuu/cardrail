@@ -1,0 +1,7 @@
+.skeleton-row td {
+  height: var(--row);
+}
+
+.skeleton-row:hover {
+  background: none;
+}
