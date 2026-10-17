@@ -57,6 +57,12 @@ cardrail:
   web:
     allowed-origins: http://localhost:4200
   events:
+    # kafka: the listener consumes the switch's topics. http: no listener; events arrive at
+    # POST /v1/events (cardrail.events.http.enabled), for deployments without a broker.
+    transport: kafka
+    http:
+      enabled: false
+      tolerance: 5m
     topic-prefix: "cardrail."
     dead-letter-topic: cardrail.clearing.dlt
     dead-letter-partitions: 3
@@ -73,3 +79,43 @@ cardrail:
     chunk-size: 500
     report-directory: settlement-reports
     network-id: CARDRAIL
+
+---
+# The public demo on Render's free tier (docs/DEPLOY.md): one 512 MB instance, no broker. The switch
+# posts its events here over HTTPS, signed with CARDRAIL_EVENTS_HMAC_SECRET.
+spring:
+  config:
+    activate:
+      on-profile: demo
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+  datasource:
+    # The switch shares the database and lives in its own schema.
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?currentSchema=clearing
+    hikari:
+      maximum-pool-size: 5
+  flyway:
+    schemas: clearing
+  lifecycle:
+    # Render sends SIGKILL 30 s after SIGTERM.
+    timeout-per-shutdown-phase: 20s
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+      # The console pings health to wake a sleeping instance.
+      cors:
+        allowed-origins: https://cardrail-demo.vercel.app,http://localhost:4200
+        allowed-methods: GET
+cardrail:
+  web:
+    allowed-origins: https://cardrail-demo.vercel.app,http://localhost:4200
+  events:
+    transport: http
+    http:
+      enabled: true
+      secret: ${CARDRAIL_EVENTS_HMAC_SECRET}
+  settlement:
+    # The container's file system is ephemeral; the report is also served from the stored positions.
+    report-directory: /tmp/settlement-reports

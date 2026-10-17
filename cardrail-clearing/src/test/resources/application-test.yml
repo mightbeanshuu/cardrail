@@ -11,6 +11,10 @@ spring:
 
 cardrail:
   events:
+    # Kafka stays the transport; the HTTP endpoint is on as well so both are tested in one context.
+    http:
+      enabled: true
+      secret: clearing-test-only-event-signing-secret-0123456789
     dead-letter-partitions: 1
     retry:
       max-retries: 2

@@ -145,7 +145,9 @@ exactly as the ISO 8583 entry point would, rather than by Bean Validation.
 Requires Java 21, PostgreSQL 17 on `localhost:5432` (user `mac`, database `cardrail`) and Redis on
 `localhost:6379`. Kafka is optional: by default the outbox relay "publishes" by logging
 (`cardrail.outbox.publisher=log`); set it to `kafka` and `spring.kafka.bootstrap-servers` to use a
-broker. The switch listens on HTTP 8080 and on ISO 8583 TCP 8583 (loopback only by default).
+broker, or to `http` with `cardrail.outbox.http.base-url` and `cardrail.outbox.http.secret` to post
+captures and reversals to clearing's `POST /v1/events`, each signed with HMAC-SHA256 over the
+timestamp and body. The switch listens on HTTP 8080 and on ISO 8583 TCP 8583 (loopback only by default).
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
@@ -154,10 +156,19 @@ mvn -q -pl cardrail-switch -DskipTests package
 java -jar cardrail-switch/target/cardrail-switch-0.1.0-SNAPSHOT.jar --spring.profiles.active=dev
 ```
 
-The `dev` profile opens three demo accounts (INR): `5555555555554444` with 50,000.00,
-`5105105105105100` with 500.00, and `2223003122003222` (blocked). It also enables the fault
+The `dev` profile opens demo accounts (INR) for published test card numbers, the same ones the
+console offers: `5555555555554444` with 50,000.00, `5200828282828210` with 25,000.00,
+`2223003122003222` with 10,000.00, `5105105105105100` with 500.00, and `5425233430109903`
+(blocked). `2223000048410010` deliberately has no account, so the issuer answers 14. It also enables the fault
 injection endpoint for the simulated issuer and `POST /dev/accounts` (below), and supplies the
 development vault keys. Add the `json` profile for ECS JSON logs.
+
+The `demo` profile is the public demo on Render ([`docs/DEPLOY.md`](../docs/DEPLOY.md)): the same
+accounts, keys from the environment, its own schema (`switch`) in a database shared with clearing,
+no ISO port, outbox events posted to clearing over signed HTTP (`cardrail.outbox.publisher=http`)
+instead of Kafka, a per-client limit on `POST`/`PUT`/`DELETE` (429 problem with `Retry-After`), and
+only the test card numbers above: any other number is answered `14` before it is fingerprinted or
+tokenized, so nothing about it is stored (`cardrail.cards.allowed-prefixes`).
 
 Swagger UI: http://localhost:8080/swagger-ui.html. Metrics: http://localhost:8080/actuator/prometheus.
 
@@ -207,7 +218,9 @@ separate ones for `merchantId` and `last4`.
 CORS allows the origins in `cardrail.web.allowed-origins` (default `http://localhost:4200`, the
 console's dev server) on `/v1/**` and `/dev/**`, without credentials.
 
-Make the issuer slower than the 1.5 s time limiter and watch stand-in take over:
+Make the issuer slower than the 1.5 s time limiter and watch stand-in take over (dev and demo
+profiles; latency at most 10,000 ms, failure rate 0 to 1; in the demo the settings revert after
+2 minutes, `cardrail.issuer.sim.reset-after`):
 
 ```sh
 curl -s -X PUT localhost:8080/dev/issuer/faults -H 'Content-Type: application/json' \
@@ -239,6 +252,9 @@ an ephemeral port. All of them share one Spring context. There is no Docker and 
 | Stand-in on timeout, 91 above limit, circuit opens and stops calling the issuer | `StandInIntegrationTest` |
 | Audit: UPDATE/DELETE rejected, tampered row found at its exact seq, 100 concurrent writers keep one chain | `AuditLogIntegrationTest` |
 | Exactly one Kafka record per approval, keyed by token | `OutboxKafkaIntegrationTest` |
+| HTTP transport: headers, signature test vector shared with clearing, non-2xx and non-JSON answers retried | `HttpOutboxPublisherTest` |
+| Fault settings revert after `reset-after` | `SimulatedIssuerFaultsTest` |
+| Demo profile: own schema, seeded test cards answering 00/51/05/14/57 as the console expects, an unlisted card number answered 14 with no trace in any table or log, bounded fault injection, rate limit, CORS, captures delivered signed over HTTP and a refused one retried | `DemoProfileIntegrationTest` |
 | Over real TCP with the load generator's acquirer: approvals, 51, a retransmission replayed, a 0400 releasing the hold, echo, unknown MTI | `IsoTcpEndToEndTest` |
 | 0100/0400 field mapping, missing fields, F90 acquirer padding, reversal response codes | `SwitchIsoHandlerTest` |
 | Vault: 16-digit tokens, same PAN same token (also after a restart), 32 concurrent first sightings agree, both insert conflicts, rewrap compare-and-set, KEK rotation, detokenize audited | `VaultTokenizationIntegrationTest` |

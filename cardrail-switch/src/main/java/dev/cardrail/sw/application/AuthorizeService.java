@@ -44,6 +44,7 @@ public class AuthorizeService {
     private static final Pattern DIGITS = Pattern.compile("\\d{12,19}");
 
     private final RequestValidator validator;
+    private final CardAllowlist allowlist;
     private final CardTokenizer tokenizer;
     private final PayloadFingerprint fingerprint;
     private final AuthorizationRepository authorizations;
@@ -56,11 +57,13 @@ public class AuthorizeService {
     private final Clock clock;
     private final RandomGenerator random = new SecureRandom();
 
-    public AuthorizeService(RequestValidator validator, CardTokenizer tokenizer, PayloadFingerprint fingerprint,
-                            AuthorizationRepository authorizations, DuplicateResolver duplicates, RiskEngine risk,
-                            IssuerClient issuer, StandInProcessor standIn, AuthorizationRecorder recorder,
-                            SwitchMetrics metrics, Clock clock) {
+    public AuthorizeService(RequestValidator validator, CardAllowlist allowlist, CardTokenizer tokenizer,
+                            PayloadFingerprint fingerprint, AuthorizationRepository authorizations,
+                            DuplicateResolver duplicates, RiskEngine risk, IssuerClient issuer,
+                            StandInProcessor standIn, AuthorizationRecorder recorder, SwitchMetrics metrics,
+                            Clock clock) {
         this.validator = validator;
+        this.allowlist = allowlist;
         this.tokenizer = tokenizer;
         this.fingerprint = fingerprint;
         this.authorizations = authorizations;
@@ -93,6 +96,11 @@ public class AuthorizeService {
         if (rejection.isPresent() && !rejection.get().storable()) {
             log.info("format error in field group '{}'", rejection.get().reason());
             return new AuthorizationResult(null, rejection.get().code(), null, false, null, null);
+        }
+        if (!allowlist.permits(request.pan())) {
+            // Answered before the fingerprint and the vault, so the number reaches no table, not even masked.
+            log.info("card number outside cardrail.cards.allowed-prefixes, answered 14 without storing it");
+            return new AuthorizationResult(null, ResponseCode.INVALID_CARD_NUMBER, null, false, null, null);
         }
         String payloadHash = fingerprint.of(request);
         TokenizedCard card = null;

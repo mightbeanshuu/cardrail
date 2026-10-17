@@ -28,7 +28,7 @@ public class SettlementService {
      * anything; a failed one resumes from the step that failed.
      */
     public SettlementResult settle(LocalDate businessDate) {
-        LocalDate current = calendar.businessDateOf(clock.instant());
+        LocalDate current = currentBusinessDate();
         if (businessDate.isAfter(current)) {
             throw new BusinessDateNotStartedException(businessDate, current);
         }
@@ -44,6 +44,11 @@ public class SettlementService {
             throw new SettlementRunFailedException(run);
         }
         return new SettlementResult(run, true);
+    }
+
+    /** The business date events arriving now belong to; it can be settled now, and later ones cannot. */
+    public LocalDate currentBusinessDate() {
+        return calendar.businessDateOf(clock.instant());
     }
 
     public SettlementRun find(LocalDate businessDate) {

@@ -58,6 +58,14 @@ flowchart LR
   fields) are not retried. They go to `cardrail.clearing.dlt` with the original topic, partition,
   offset and the reason in headers, and the partition moves on. Other failures are retried with
   bounded exponential back-off, then dead-lettered.
+- **Over HTTP, where there is no broker.** With `cardrail.events.transport=http` the listener is
+  off and the switch posts each event to `POST /v1/events` (`cardrail.events.http.enabled`). The
+  request must carry `Cardrail-Timestamp` (epoch seconds) and `Cardrail-Signature`, the hex
+  HMAC-SHA256 of `timestamp + "." + body` under the shared `cardrail.events.http.secret`, checked in
+  constant time, with the timestamp within 5 minutes of this service's clock; otherwise 401. The
+  event then takes the same idempotent path as from Kafka: 200 with `RECORDED`, `IGNORED` or
+  `DUPLICATE`, or 422 for an event that cannot be processed. The public demo runs this way
+  ([`docs/DEPLOY.md`](../docs/DEPLOY.md)); Kafka is the default everywhere else.
 - **Tolerant reader.** The service keeps its own copy of the event DTO, ignores unknown fields and
   validates only what clearing uses. `SwitchEventContractTest` parses the samples from
   `CONTRACTS.md`.
@@ -155,6 +163,9 @@ decision is listed in [`docs/ORACLE.md`](docs/ORACLE.md).
 | `ClearingServiceIntegrationTest` | interchange lookup and default category; four concurrent deliveries commit once; cut-off boundary; reversal offset; ignored reversals |
 | `SettlementJobIntegrationTest` | end-to-end positions and CSV; completed date not re-run; late record swept into the next run; restart after a fault in chunk 2; reconciliation failures roll back |
 | `WebApiIntegrationTest` | every endpoint, problem details, CORS |
+| `HttpEventsIntegrationTest` | signed events recorded once, a replayed request is a duplicate, bad, missing or stale signatures 401 with nothing stored, invalid events 422 |
+| `EventSignatureVerifierTest` | the signature test vector shared with the switch, tampering, tolerance either way |
+| `DemoProfileIntegrationTest` | demo profile from an empty schema: Flyway and Spring Batch tables in `clearing`, no Kafka listener, a signed capture settled on the current business date, CORS |
 | `SwitchEventContractTest` | the `CONTRACTS.md` samples parse into the DTO |
 | `InterchangeFeePropertiesTest` | fee invariants (jqwik) |
 | `BusinessCalendarTest`, `ReconciliationTest`, `InterchangeRateTest`, ... | domain rules |
@@ -170,6 +181,8 @@ Base `http://localhost:8081`. Errors are RFC 7807 `application/problem+json`. CO
 | POST | `/v1/settlement-runs` | body `{"businessDate":"YYYY-MM-DD"}`. 201 when this call ran the job, 200 when the date was already settled, 409 while a run is in progress, 422 for a business date that has not started, 500 with the reason when the run fails (POST again to resume) |
 | GET | `/v1/settlement-runs/{businessDate}` | run status (`RUNNING`, `COMPLETED`, `FAILED`) and positions; 404 if never run |
 | GET | `/v1/settlement-runs/{businessDate}/report.csv` | the report; 409 until the run completes |
+| GET | `/v1/business-date` | the current business date, zone and cut-off: the latest date that can be settled |
+| POST | `/v1/events` | switch events over HTTP, when enabled (above) |
 
 The examples below use the data set from `SettlementJobIntegrationTest`: five captures across two
 acquirers, two BINs and two currencies, one of them reversed.
@@ -233,6 +246,10 @@ settlement_date,party_type,party_id,currency,record_count,gross_minor,interchang
 |---|---|---|
 | `cardrail.clearing.settlement-zone` | `Asia/Kolkata` | zone of the business-date cut-off |
 | `cardrail.clearing.cut-off` | `23:00` | events at or after it belong to the next business date |
+| `cardrail.events.transport` | `kafka` | `http` turns the Kafka listener off |
+| `cardrail.events.http.enabled` | `false` | serves `POST /v1/events` |
+| `cardrail.events.http.secret` | none | HMAC key shared with the switch, at least 32 characters |
+| `cardrail.events.http.tolerance` | `5m` | allowed distance of a request's timestamp from the clock |
 | `cardrail.events.topic-prefix` | `cardrail.` | |
 | `cardrail.events.dead-letter-topic` | `cardrail.clearing.dlt` | |
 | `cardrail.events.retry.*` | 4 retries, 500 ms doubling to 10 s | for failures other than poison messages |

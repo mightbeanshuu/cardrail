@@ -1,0 +1,11 @@
+# The images are built from the repository root so Maven sees the parent pom and the reactor.
+.git
+.github
+.idea
+.vscode
+**/target
+**/*.iml
+**/.jqwik-database
+**/.impeccable
+# The console is built and hosted by Vercel, not in these images.
+cardrail-console

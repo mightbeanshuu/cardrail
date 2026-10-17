@@ -2,6 +2,7 @@ package dev.cardrail.clearing.adapter.messaging;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.TopicPartition;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
@@ -11,6 +12,7 @@ import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
 
 @Configuration(proxyBeanMethods = false)
+@ConditionalOnProperty(name = "cardrail.events.transport", havingValue = "kafka", matchIfMissing = true)
 class KafkaConfiguration {
 
     @Bean

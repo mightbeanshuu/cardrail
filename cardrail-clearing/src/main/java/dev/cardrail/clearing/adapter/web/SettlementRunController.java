@@ -1,5 +1,6 @@
 package dev.cardrail.clearing.adapter.web;
 
+import dev.cardrail.clearing.application.ClearingProperties;
 import dev.cardrail.clearing.application.SettlementReport;
 import dev.cardrail.clearing.application.SettlementResult;
 import dev.cardrail.clearing.application.SettlementService;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 
 @RestController
 class SettlementRunController {
@@ -25,9 +28,20 @@ class SettlementRunController {
     static final MediaType TEXT_CSV = new MediaType("text", "csv", StandardCharsets.UTF_8);
 
     private final SettlementService settlement;
+    private final ClearingProperties properties;
 
-    SettlementRunController(SettlementService settlement) {
+    SettlementRunController(SettlementService settlement, ClearingProperties properties) {
         this.settlement = settlement;
+        this.properties = properties;
+    }
+
+    record BusinessDateView(LocalDate businessDate, ZoneId zone, LocalTime cutOff) {
+    }
+
+    /** So a client settles the date the server means by today, whatever the client's own time zone. */
+    @GetMapping("/v1/business-date")
+    BusinessDateView businessDate() {
+        return new BusinessDateView(settlement.currentBusinessDate(), properties.settlementZone(), properties.cutOff());
     }
 
     static String runPath(LocalDate businessDate) {

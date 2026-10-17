@@ -11,6 +11,7 @@ import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 
+import java.time.Clock;
 import java.util.List;
 
 @Configuration(proxyBeanMethods = false)
@@ -30,6 +31,12 @@ class MessagingConfiguration {
     @ConditionalOnProperty(name = "cardrail.outbox.publisher", havingValue = "kafka")
     OutboxPublisher kafkaOutboxPublisher(KafkaTemplate<String, String> kafka, OutboxProperties properties) {
         return new KafkaOutboxPublisher(kafka, properties.topicPrefix(), properties.sendTimeout());
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "cardrail.outbox.publisher", havingValue = "http")
+    OutboxPublisher httpOutboxPublisher(HttpOutboxProperties http, OutboxProperties properties, Clock clock) {
+        return new HttpOutboxPublisher(http, properties.sendTimeout(), clock);
     }
 
     @Bean

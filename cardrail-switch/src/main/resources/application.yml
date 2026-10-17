@@ -88,9 +88,16 @@ cardrail:
     request-timeout: 5s
     idle-timeout: 5m
     drain-timeout: 10s
+  # Empty: every card number is processed. The demo profile lists its test cards.
+  cards:
+    allowed-prefixes: []
   web:
     allowed-origins:
       - http://localhost:4200
+    rate-limit:
+      enabled: false
+      burst: 20
+      requests-per-minute: 60
   duplicates:
     payload-hash-key: ${CARDRAIL_PAYLOAD_HASH_KEY:dev-only-payload-hash-key-change-me-0123456789}
     in-flight-wait: 3s
@@ -132,6 +139,10 @@ cardrail:
     topic-partitions: 3
     topic-replicas: 1
     poll-interval: 1s
+    http:
+      event-types:
+        - authorization.captured
+        - authorization.reversed
 
 ---
 # DEVELOPMENT KEYS, NOT SECRET. They are published in this repository so that dev and test tokens
@@ -147,6 +158,71 @@ cardrail:
         key: /yebDAI+0Vw595CGDR5vX5wY8hhwVwcfQR2P0bntk0o=
         status: ACTIVE
     blind-index-key: L4uH8gYvEp8uhse9xA2PiO4mf6fD1YBVPo+NgEwv2N8=
+
+---
+# The public demo on Render's free tier (docs/DEPLOY.md): one 512 MB instance, HTTP only, no broker.
+# Every secret comes from the environment; the vault keys are CARDRAIL_VAULT_KEKS_0_* and
+# CARDRAIL_VAULT_BLIND_INDEX_KEY as in any other deployment, and the development keys are refused.
+spring:
+  config:
+    activate:
+      on-profile: demo
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+  datasource:
+    # Clearing shares the database and lives in its own schema.
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?currentSchema=switch
+    hikari:
+      maximum-pool-size: 5
+  flyway:
+    schemas: switch
+  lifecycle:
+    # Render sends SIGKILL 30 s after SIGTERM.
+    timeout-per-shutdown-phase: 20s
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+      # The console pings health to wake a sleeping instance.
+      cors:
+        allowed-origins: https://cardrail-demo.vercel.app,http://localhost:4200
+        allowed-methods: GET
+cardrail:
+  iso:
+    enabled: false
+  issuer:
+    sim:
+      # The fault settings are shared by every visitor, so one visitor's outage ends by itself.
+      reset-after: 2m
+  cards:
+    # Published test card numbers only; anything else is answered 14 and never stored.
+    allowed-prefixes:
+      - "5555555555554444"
+      - "5200828282828210"
+      - "2223003122003222"
+      - "5105105105105100"
+      - "5425233430109903"
+      - "2223000048410010"   # no account: the issuer answers 14
+  risk:
+    velocity:
+      # Every visitor shares the same six cards.
+      max-count: 200
+  outbox:
+    publisher: http
+    batch-size: 20
+    # The free clearing instance sleeps when idle and takes a while to wake, so the first sends of a
+    # burst time out; enough attempts keep those events until it answers.
+    send-timeout: 15s
+    max-attempts: 500
+    http:
+      secret: ${CARDRAIL_EVENTS_HMAC_SECRET}
+  web:
+    allowed-origins:
+      - https://cardrail-demo.vercel.app
+      - http://localhost:4200
+    rate-limit:
+      enabled: true
 
 ---
 spring:

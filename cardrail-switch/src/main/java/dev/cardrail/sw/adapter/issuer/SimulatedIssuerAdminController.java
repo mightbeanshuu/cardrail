@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.context.annotation.Profile;
@@ -16,9 +17,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.time.Instant;
 
-/** Dev profile only: toggles the simulated issuer's latency and failure rate at runtime. */
-@Profile("dev")
+/**
+ * Dev and demo profiles: toggles the simulated issuer's latency and failure rate at runtime, so a
+ * visitor of the public demo can watch stand-in processing take over.
+ */
+@Profile("dev | demo")
 @RestController
 @RequestMapping("/dev/issuer/faults")
 @Tag(name = "dev: simulated issuer")
@@ -30,31 +35,37 @@ class SimulatedIssuerAdminController {
         this.faults = faults;
     }
 
-    record FaultSettings(@NotNull @Min(0) Long latencyMs,
+    /** 10 s is well past the issuer time limit; more would only hold request threads for nothing. */
+    record FaultSettings(@NotNull @Min(0) @Max(10_000) Long latencyMs,
                          @NotNull @DecimalMin("0.0") @DecimalMax("1.0") Double failureRate) {
+    }
+
+    /** @param resetsAt when the configured settings come back by themselves; absent if they do not */
+    record FaultView(long latencyMs, double failureRate, Instant resetsAt) {
     }
 
     @GetMapping
     @Operation(summary = "Current fault settings")
-    FaultSettings get() {
-        return view(faults.current());
+    FaultView get() {
+        return view();
     }
 
     @PutMapping
     @Operation(summary = "Set latency and failure rate")
-    FaultSettings set(@Valid @RequestBody FaultSettings settings) {
+    FaultView set(@Valid @RequestBody FaultSettings settings) {
         faults.set(new SimulatedIssuerFaults.Settings(Duration.ofMillis(settings.latencyMs()), settings.failureRate()));
-        return view(faults.current());
+        return view();
     }
 
     @DeleteMapping
     @Operation(summary = "Restore the configured settings")
-    FaultSettings reset() {
+    FaultView reset() {
         faults.reset();
-        return view(faults.current());
+        return view();
     }
 
-    private static FaultSettings view(SimulatedIssuerFaults.Settings s) {
-        return new FaultSettings(s.latency().toMillis(), s.failureRate());
+    private FaultView view() {
+        SimulatedIssuerFaults.Settings s = faults.current();
+        return new FaultView(s.latency().toMillis(), s.failureRate(), faults.resetsAt().orElse(null));
     }
 }

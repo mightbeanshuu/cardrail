@@ -12,8 +12,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/** Dev profile only: opens issuer accounts for well-known test card numbers so the curl examples work. */
-@Profile("dev")
+/**
+ * Dev and demo profiles: opens issuer accounts for published test card numbers, so the curl examples
+ * and the public demo have cards to use. Cards that already have an account are left as they are.
+ */
+@Profile("dev | demo")
 @Component
 class DemoAccountsLoader implements ApplicationRunner {
 
@@ -23,10 +26,14 @@ class DemoAccountsLoader implements ApplicationRunner {
     private record DemoCard(String pan, long balanceMinor, AccountStatus status) {
     }
 
+    // The console's card list (cardrail-console/src/app/demo/demo-cards.ts) must match. Its
+    // 2223000048410010 deliberately has no account, to show the issuer's 14.
     private static final List<DemoCard> CARDS = List.of(
             new DemoCard("5555555555554444", 5_000_000, AccountStatus.ACTIVE),   // INR 50,000.00
-            new DemoCard("5105105105105100", 50_000, AccountStatus.ACTIVE),      // INR 500.00
-            new DemoCard("2223003122003222", 1_000_000, AccountStatus.BLOCKED)); // INR 10,000.00, blocked
+            new DemoCard("5200828282828210", 2_500_000, AccountStatus.ACTIVE),   // INR 25,000.00
+            new DemoCard("2223003122003222", 1_000_000, AccountStatus.ACTIVE),   // INR 10,000.00
+            new DemoCard("5105105105105100", 50_000, AccountStatus.ACTIVE),      // INR 500.00, for a 51
+            new DemoCard("5425233430109903", 1_000_000, AccountStatus.BLOCKED)); // blocked, for a 05
 
     private final CardTokenizer tokenizer;
     private final IssuerLedger ledger;

@@ -155,7 +155,7 @@ class AuthorizationSearchIntegrationTest {
         mvc.perform(get("/v1/authorizations").header(HttpHeaders.ORIGIN, CONSOLE))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, CONSOLE))
-                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "X-Correlation-Id"));
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "X-Correlation-Id, Retry-After"));
 
         mvc.perform(options("/v1/authorizations")
                         .header(HttpHeaders.ORIGIN, "http://evil.example")

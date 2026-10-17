@@ -1,6 +1,7 @@
 package dev.cardrail.clearing.integration;
 
 import dev.cardrail.clearing.application.SettlementProperties;
+import dev.cardrail.clearing.domain.BusinessCalendar;
 import dev.cardrail.clearing.support.ClearingIntegrationTest;
 import dev.cardrail.clearing.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,7 +13,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -131,6 +134,24 @@ class WebApiIntegrationTest {
         mvc.perform(get("/v1/clearing-records").param("date", "2025-03-14"))
                 .andExpect(jsonPath("$.items[0].status").value("SETTLED"))
                 .andExpect(jsonPath("$.items[0].settlementDate").value("2025-03-14"));
+    }
+
+    @Test
+    void theCurrentBusinessDateCanBeSettledAndTheNextCannotYet() throws Exception {
+        LocalDate today = new BusinessCalendar(TestFixtures.IST, LocalTime.of(23, 0)).businessDateOf(Instant.now());
+
+        mvc.perform(get("/v1/business-date"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.businessDate").value(today.toString()))
+                .andExpect(jsonPath("$.zone").value("Asia/Kolkata"))
+                .andExpect(jsonPath("$.cutOff").value("23:00:00"));
+        mvc.perform(post("/v1/settlement-runs").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"businessDate\":\"" + today + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+        mvc.perform(post("/v1/settlement-runs").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"businessDate\":\"" + today.plusDays(1) + "\"}"))
+                .andExpect(status().isUnprocessableEntity());
     }
 
     @Test

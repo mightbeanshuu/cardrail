@@ -1,0 +1,123 @@
+# Render Blueprint for the public demo. What runs where, and why, is in docs/DEPLOY.md.
+# Both images build from the repository root (dockerContext: .) because Maven needs the parent pom.
+
+services:
+  - type: web
+    name: cardrail-switch
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    autoDeployTrigger: commit
+    dockerContext: .
+    dockerfilePath: ./cardrail-switch/Dockerfile
+    # Readiness leaves Redis out on purpose: without it velocity checks degrade, authorizations go on.
+    healthCheckPath: /actuator/health/readiness
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: demo
+      - key: DB_HOST
+        fromDatabase:
+          name: cardrail-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: cardrail-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: cardrail-db
+          property: database
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: cardrail-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: cardrail-db
+          property: password
+      - key: SPRING_DATA_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: cardrail-redis
+          property: connectionString
+      # Free instances cannot receive private-network traffic, so the switch calls clearing's public URL.
+      - key: CARDRAIL_OUTBOX_HTTP_BASE_URL
+        value: https://cardrail-clearing.onrender.com
+      # generateValue is 32 random bytes in base64, exactly the format the vault expects. Generated
+      # once, on creation; changing a key later makes the stored card records unreadable.
+      - key: CARDRAIL_VAULT_KEKS_0_ID
+        value: demo-kek-1
+      - key: CARDRAIL_VAULT_KEKS_0_KEY
+        generateValue: true
+      - key: CARDRAIL_VAULT_KEKS_0_STATUS
+        value: ACTIVE
+      - key: CARDRAIL_VAULT_BLIND_INDEX_KEY
+        generateValue: true
+      - key: CARDRAIL_PAYLOAD_HASH_KEY
+        generateValue: true
+      - fromGroup: cardrail-shared
+
+  - type: web
+    name: cardrail-clearing
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    autoDeployTrigger: commit
+    dockerContext: .
+    dockerfilePath: ./cardrail-clearing/Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: demo
+      - key: DB_HOST
+        fromDatabase:
+          name: cardrail-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: cardrail-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: cardrail-db
+          property: database
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: cardrail-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: cardrail-db
+          property: password
+      - fromGroup: cardrail-shared
+
+  - type: keyvalue
+    name: cardrail-redis
+    plan: free
+    region: singapore
+    ipAllowList: []
+    # A full instance then refuses writes, and the switch falls back to its stricter limits
+    # (ADR 0005) instead of losing counters to eviction.
+    maxmemoryPolicy: noeviction
+
+databases:
+  - name: cardrail-db
+    plan: free
+    region: singapore
+    databaseName: cardrail
+    user: cardrail
+    ipAllowList: []
+
+envVarGroups:
+  - name: cardrail-shared
+    envVars:
+      # The switch signs every event it posts to clearing with this; clearing verifies it.
+      - key: CARDRAIL_EVENTS_HMAC_SECRET
+        generateValue: true
+      - key: CARDRAIL_WEB_ALLOWED_ORIGINS
+        value: https://cardrail-demo.vercel.app,http://localhost:4200
+      # The console pings /actuator/health cross-origin to wake a sleeping service.
+      - key: MANAGEMENT_ENDPOINTS_WEB_CORS_ALLOWED_ORIGINS
+        value: https://cardrail-demo.vercel.app,http://localhost:4200
