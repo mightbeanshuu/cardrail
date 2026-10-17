@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>dev.cardrail</groupId>
+    <artifactId>cardrail-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>cardrail-apisec</artifactId>
+  <name>cardrail-apisec</name>
+  <description>Server-side Mastercard-style API security: OAuth 1.0a RSA-SHA256 request verification and JWE field-level encryption</description>
+
+  <properties>
+    <mastercard.oauth1-signer.version>1.6.0</mastercard.oauth1-signer.version>
+    <mastercard.client-encryption.version>1.8.9</mastercard.client-encryption.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.mastercard.developer</groupId>
+      <artifactId>oauth1-signer</artifactId>
+      <version>${mastercard.oauth1-signer.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.mastercard.developer</groupId>
+      <artifactId>client-encryption</artifactId>
+      <version>${mastercard.client-encryption.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>
