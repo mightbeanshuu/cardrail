@@ -13,9 +13,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 
 /**
- * Stand-in for the vault during development: a deterministic, keyed token in the reserved BIN 999999,
- * 19 digits and Luhn-valid. It stores nothing, so tokens cannot be turned back into PANs. Not for
- * production use; the real tokenizer is cardrail-vault.
+ * Keyless alternative to the vault ({@code cardrail.tokenizer=dev}): a deterministic, keyed token in
+ * the reserved BIN 999999, 19 digits and Luhn-valid. It stores nothing, so tokens cannot be turned
+ * back into PANs. Not for production use; the default tokenizer is the vault.
  */
 public class DevCardTokenizer implements CardTokenizer {
 

@@ -61,7 +61,7 @@ public class ReverseService {
                     a.status(), 0, null);
             case CAPTURED -> throw new AuthorizationConflictException(
                     "authorization " + a.id() + " is captured; reverse it with a refund, not a reversal");
-            case PENDING -> throw new AuthorizationConflictException(
+            case PENDING -> throw new AuthorizationInFlightException(
                     "authorization " + a.id() + " is still being decided; retry the reversal");
         };
     }

@@ -39,6 +39,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid capture amount", e.getMessage());
     }
 
+    @ExceptionHandler(InvalidSearchException.class)
+    ProblemDetail invalidSearch(InvalidSearchException e) {
+        return problem(HttpStatus.BAD_REQUEST, "Invalid search", e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     ProblemDetail unexpected(Exception e) {
         log.error("unhandled error", e);

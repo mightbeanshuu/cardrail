@@ -27,11 +27,14 @@ public class TestFixtures {
     @Autowired private CircuitBreaker issuerCircuitBreaker;
     @Autowired private SimulatedIssuerFaults faults;
 
-    /** Empties every table (TRUNCATE bypasses the append-only row triggers), reseeds reference data. */
+    /**
+     * Empties every table (TRUNCATE bypasses the append-only row triggers), reseeds reference data.
+     * The vault is emptied too, so a PAN gets a new token in each test; accounts are opened after this.
+     */
     public void reset() {
         jdbc.sql("""
                 TRUNCATE card_authorization, issuer_hold, issuer_account, journal_entry, journal, ledger_account,
-                         outbox, audit_log, stand_in_limit, mcc_rule RESTART IDENTITY CASCADE
+                         outbox, audit_log, stand_in_limit, mcc_rule, vault_record RESTART IDENTITY CASCADE
                 """).update();
         new ResourceDatabasePopulator(new ClassPathResource("db/migration/V6__seed_reference_data.sql"))
                 .execute(dataSource);

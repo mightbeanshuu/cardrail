@@ -44,6 +44,9 @@ public interface AuthorizationRepository {
     /** Same as {@link #lockExpirable} for PENDING rows: decisions abandoned by a crashed or failed request. */
     List<StoredAuthorization> lockAbandoned(Instant createdBefore, int limit);
 
+    /** One page of matches, newest first, and the total number of matches. */
+    AuthorizationPage search(AuthorizationSearch search);
+
     /** Attempts on this card in this currency since {@code since}, not counting {@code excluding}. */
     RecentActivity recentActivity(String token, int currency, Instant since, UUID excluding);
 

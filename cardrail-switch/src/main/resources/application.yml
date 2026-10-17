@@ -67,10 +67,30 @@ springdoc:
 cardrail:
   scheduling:
     enabled: true
-  tokenizer: dev
+  # vault (default): cardrail-vault, encrypted PANs in vault_record, keys from cardrail.vault.*
+  # dev: keyless HMAC tokens, nothing stored, cannot be detokenized
+  tokenizer: vault
   dev:
     tokenizer:
       key: ${CARDRAIL_DEV_TOKENIZER_KEY:dev-only-tokenizer-key-change-me-0123456789}
+  vault:
+    token-bin: "999999"
+    # keks and blind-index-key have no default: outside the dev and test profiles they must be
+    # supplied (e.g. CARDRAIL_VAULT_KEKS_0_ID, CARDRAIL_VAULT_KEKS_0_KEY, CARDRAIL_VAULT_KEKS_0_STATUS,
+    # CARDRAIL_VAULT_BLIND_INDEX_KEY), or the switch refuses to start.
+  iso:
+    enabled: true
+    port: 8583
+    # Loopback by default, so exposing the ISO port on a network interface is a deliberate choice.
+    bind-address: 127.0.0.1
+    max-connections: 1024
+    max-in-flight-per-connection: 64
+    request-timeout: 5s
+    idle-timeout: 5m
+    drain-timeout: 10s
+  web:
+    allowed-origins:
+      - http://localhost:4200
   duplicates:
     payload-hash-key: ${CARDRAIL_PAYLOAD_HASH_KEY:dev-only-payload-hash-key-change-me-0123456789}
     in-flight-wait: 3s
@@ -112,6 +132,21 @@ cardrail:
     topic-partitions: 3
     topic-replicas: 1
     poll-interval: 1s
+
+---
+# DEVELOPMENT KEYS, NOT SECRET. They are published in this repository so that dev and test tokens
+# stay stable across restarts. The switch refuses to start with these values in any other profile.
+spring:
+  config:
+    activate:
+      on-profile: "dev | test"
+cardrail:
+  vault:
+    keks:
+      - id: dev-kek-v1
+        key: /yebDAI+0Vw595CGDR5vX5wY8hhwVwcfQR2P0bntk0o=
+        status: ACTIVE
+    blind-index-key: L4uH8gYvEp8uhse9xA2PiO4mf6fD1YBVPo+NgEwv2N8=
 
 ---
 spring:

@@ -1,6 +1,5 @@
 package dev.cardrail.sw.logging;
 
-import dev.cardrail.sw.domain.card.PanMasking;
 import org.springframework.boot.json.JsonWriter;
 import org.springframework.boot.logging.structured.StructuredLoggingJsonMembersCustomizer;
 
@@ -12,6 +11,6 @@ public class PanMaskingJsonMembersCustomizer implements StructuredLoggingJsonMem
 
     @Override
     public void customize(JsonWriter.Members<Object> members) {
-        members.applyingValueProcessor(JsonWriter.ValueProcessor.of(String.class, PanMasking::maskPans));
+        members.applyingValueProcessor(JsonWriter.ValueProcessor.of(String.class, LogRedaction::redact));
     }
 }

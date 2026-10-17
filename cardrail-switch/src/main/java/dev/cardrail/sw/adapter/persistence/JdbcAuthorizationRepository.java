@@ -5,14 +5,21 @@ import dev.cardrail.sw.domain.authorization.AuthorizationStatus;
 import dev.cardrail.sw.domain.authorization.ResponseCode;
 import dev.cardrail.sw.domain.authorization.StoredAuthorization;
 import dev.cardrail.sw.domain.authorization.TransmissionKey;
+import dev.cardrail.sw.port.AuthorizationPage;
 import dev.cardrail.sw.port.AuthorizationRepository;
+import dev.cardrail.sw.port.AuthorizationSearch;
 import dev.cardrail.sw.port.NewAuthorization;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -214,6 +221,64 @@ class JdbcAuthorizationRepository implements AuthorizationRepository {
                 .param("limit", limit)
                 .query(MAPPER)
                 .list();
+    }
+
+    /**
+     * The count and the page are two statements; REPEATABLE READ gives them one snapshot, so the total
+     * always agrees with the page. Ordering ends on the id so rows created in the same microsecond page
+     * deterministically. V8 has the indexes for this order; see the migration for which filters have
+     * their own.
+     */
+    @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public AuthorizationPage search(AuthorizationSearch search) {
+        List<String> conditions = new ArrayList<>();
+        Map<String, Object> params = new HashMap<>();
+        if (search.status() != null) {
+            conditions.add("status = :status");
+            params.put("status", search.status().name());
+        }
+        if (search.responseCode() != null) {
+            conditions.add("response_code = :responseCode");
+            params.put("responseCode", search.responseCode().code());
+        }
+        if (search.merchantId() != null) {
+            conditions.add("merchant_id = :merchantId");
+            params.put("merchantId", search.merchantId());
+        }
+        if (search.last4() != null) {
+            conditions.add("right(masked_pan, 4) = :last4");
+            params.put("last4", search.last4());
+        }
+        if (search.standIn() != null) {
+            conditions.add("stand_in = :standIn");
+            params.put("standIn", search.standIn());
+        }
+        if (search.from() != null) {
+            conditions.add("created_at >= :from");
+            params.put("from", timestamp(search.from()));
+        }
+        if (search.to() != null) {
+            conditions.add("created_at < :to");
+            params.put("to", timestamp(search.to()));
+        }
+        String where = conditions.isEmpty() ? "" : " WHERE " + String.join(" AND ", conditions);
+
+        long total = jdbc.sql("SELECT count(*) FROM card_authorization" + where)
+                .params(params)
+                .query(Long.class)
+                .single();
+        if (total <= search.offset()) {
+            return new AuthorizationPage(List.of(), total);
+        }
+        List<StoredAuthorization> items = jdbc.sql("SELECT " + COLUMNS + " FROM card_authorization" + where
+                        + " ORDER BY created_at DESC, id DESC LIMIT :limit OFFSET :offset")
+                .params(params)
+                .param("limit", search.size())
+                .param("offset", search.offset())
+                .query(MAPPER)
+                .list();
+        return new AuthorizationPage(items, total);
     }
 
     @Override

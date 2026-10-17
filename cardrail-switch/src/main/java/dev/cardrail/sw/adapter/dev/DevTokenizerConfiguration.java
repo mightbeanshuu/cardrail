@@ -6,9 +6,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** Active unless another tokenizer is selected with {@code cardrail.tokenizer}. */
+/** Selected with {@code cardrail.tokenizer=dev}; the default is the vault. */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnProperty(name = "cardrail.tokenizer", havingValue = "dev", matchIfMissing = true)
+@ConditionalOnProperty(name = "cardrail.tokenizer", havingValue = "dev")
 class DevTokenizerConfiguration {
 
     @Bean

@@ -12,6 +12,8 @@ spring:
 cardrail:
   scheduling:
     enabled: false
+  iso:
+    port: 0
   outbox:
     publisher: kafka
   risk:
