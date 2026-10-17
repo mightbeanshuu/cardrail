@@ -17,6 +17,10 @@ flowchart LR
     S -- authorize --> I[Issuer]
     S -. issuer timeout / circuit open .-> STIP[Stand-in processing]
     S -- outbox --> K[[Kafka]]
+    K --> C[cardrail-clearing]
+    C -- settlement --> O[(Oracle / PostgreSQL)]
+    UI[cardrail-console] -. REST .-> S
+    UI -. REST .-> C
 ```
 
 ## Modules
@@ -29,6 +33,8 @@ flowchart LR
 | [`cardrail-gateway`](cardrail-gateway/) | ISO 8583 TCP server on virtual threads: pipelined requests per connection, bounded in-flight work with TCP backpressure, per-request deadlines, idle timeouts and graceful drain. |
 | [`cardrail-loadgen`](cardrail-loadgen/) | Acquirer simulator and load generator. Open-loop scheduling measured from the intended send time, so latency under load is not hidden by coordinated omission. |
 | [`cardrail-apisec`](cardrail-apisec/) | Server-side OAuth 1.0a RSA-SHA256 request verification with body hash and nonce replay protection, and JWE field-level encryption (RSA-OAEP-256 + A256GCM). Tested for interoperability against Mastercard's open-source `oauth1-signer` and `client-encryption` libraries. |
+| [`cardrail-clearing`](cardrail-clearing/) | A separate Spring Boot microservice for clearing and settlement. It consumes the switch's capture and reversal events from Kafka with an idempotent consumer and a dead-letter topic, assigns business dates by cut-off, computes interchange, and runs end-of-day settlement as a restartable Spring Batch job whose positions must net to zero. Its own database; the same test suite runs on PostgreSQL and on Oracle Database Free in CI. |
+| [`cardrail-console`](cardrail-console/) | Angular operations console: authorization search, reverse and partial capture, audit chain verification, settlement runs with reconciliation, and an issuer fault simulator to demonstrate stand-in processing. |
 
 Each module has its own README with design notes, and the switch has architecture decision records in
 [`cardrail-switch/docs/adr/`](cardrail-switch/docs/adr/). The contract between modules is
@@ -61,8 +67,9 @@ mvn verify                                   # all modules, all tests
 mvn -pl cardrail-switch spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-CI runs the full build on every push with PostgreSQL and Redis service containers
-([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+CI runs on every push ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): the full Maven build
+with PostgreSQL and Redis service containers, the clearing service against Oracle Database Free, and
+the Angular console's build and tests.
 
 ## What this is not
 
