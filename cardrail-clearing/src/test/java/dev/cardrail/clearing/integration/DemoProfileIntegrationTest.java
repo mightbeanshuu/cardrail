@@ -114,6 +114,17 @@ class DemoProfileIntegrationTest {
     }
 
     @Test
+    void theConsoleHealthPreflightWithCorrelationHeaderIsAllowed() throws Exception {
+        // The console adds X-Correlation-Id to every request, so the browser preflights even the health GET.
+        mvc.perform(options("/actuator/health")
+                        .header(HttpHeaders.ORIGIN, CONSOLE)
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "x-correlation-id"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, CONSOLE));
+    }
+
+    @Test
     void theConsoleOriginIsAllowed() throws Exception {
         mvc.perform(options("/v1/settlement-runs")
                         .header(HttpHeaders.ORIGIN, CONSOLE)

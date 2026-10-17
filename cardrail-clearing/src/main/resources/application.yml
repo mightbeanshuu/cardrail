@@ -108,6 +108,8 @@ management:
       cors:
         allowed-origins: https://cardrail-demo.vercel.app,http://localhost:4200
         allowed-methods: GET
+        # The console sends X-Correlation-Id on every request, which makes even a GET preflighted.
+        allowed-headers: Content-Type,X-Correlation-Id
 cardrail:
   web:
     allowed-origins: https://cardrail-demo.vercel.app,http://localhost:4200
