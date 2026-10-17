@@ -4,7 +4,7 @@ import { Observable, catchError, from, of, switchMap, throwError } from 'rxjs';
 import { toApiError } from '../errors/api-error';
 import { ErrorBannerService } from '../errors/error-banner.service';
 import { CORRELATION_ID_HEADER } from './correlation-id.interceptor';
-import { HANDLED_ERROR_STATUSES } from './http-context';
+import { HANDLED_ERROR_STATUSES, QUIET_ERRORS } from './http-context';
 
 /**
  * Turns every failed response into a typed ApiError (RFC 7807 fields where present) and reports it
@@ -20,7 +20,7 @@ export const problemInterceptor: HttpInterceptorFn = (req, next) => {
       return readErrorBody(err.error).pipe(
         switchMap((body) => {
           const apiError = toApiError(err, body, req.headers.get(CORRELATION_ID_HEADER));
-          if (!req.context.get(HANDLED_ERROR_STATUSES).includes(apiError.status)) {
+          if (!req.context.get(QUIET_ERRORS) && !req.context.get(HANDLED_ERROR_STATUSES).includes(apiError.status)) {
             banner.report(apiError);
           }
           return throwError(() => apiError);

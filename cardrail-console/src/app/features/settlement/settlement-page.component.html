@@ -1,6 +1,12 @@
 <div class="page">
   <div class="page__header">
-    <h1 tabindex="-1">Settlement</h1>
+    <div class="page__heading">
+      <h1 tabindex="-1">Settlement</h1>
+      <p class="page__lede">
+        Authorization moves no money. Captures become clearing records in cardrail-clearing, and the end-of-day run
+        nets them into one position per bank and network. The positions must sum to zero.
+      </p>
+    </div>
     <form class="date-form" (submit)="$event.preventDefault(); showDate()" novalidate aria-label="Choose business date">
       <div class="field">
         <label for="business-date">Business date (UTC)</label>
@@ -175,7 +181,13 @@
                   <td>{{ c.status ?? '—' }}</td>
                 </tr>
               } @empty {
-                <tr class="table__state"><td colspan="11"><p>No clearing records for this date.</p></td></tr>
+                <tr class="table__state">
+                  <td colspan="11">
+                    <p>No clearing records for this date.</p>
+                    <p class="muted">Records are created when an authorization is captured. Send a payment from the
+                      <a routerLink="/terminal">terminal</a>, capture it on its authorization page, then come back.</p>
+                  </td>
+                </tr>
               }
             }
           }

@@ -1,7 +1,13 @@
 <div class="page">
   <div class="page__header">
-    <h1 tabindex="-1">Authorizations</h1>
-    <p class="page__subtitle">Times in UTC</p>
+    <div class="page__heading">
+      <h1 tabindex="-1">Authorizations</h1>
+      <p class="page__lede">
+        Every request the switch has decided, newest first. An approval holds the amount on the card until it is
+        captured, reversed or expires, so this is where a support engineer starts. Times are UTC.
+      </p>
+    </div>
+    <a class="btn" routerLink="/terminal">Send a payment</a>
   </div>
 
   <section class="panel" aria-labelledby="filters-heading">
@@ -158,6 +164,8 @@
                       <button type="button" class="btn btn--sm" (click)="clearFilters()">Clear filters</button>
                     } @else {
                       <p>No authorizations yet.</p>
+                      <p class="muted">Send a payment from the terminal and it appears here.</p>
+                      <a class="btn btn--sm btn--primary" routerLink="/terminal">Open the terminal</a>
                     }
                   </td>
                 </tr>

@@ -1,0 +1,67 @@
+<div class="page overview">
+  <header class="intro">
+    <div class="intro__text">
+      <h1 tabindex="-1">cardrail <span class="intro__kicker">card payment switch, live demo</span></h1>
+      <p class="intro__lede">
+        cardrail is a card payment switch in Java 21 and Spring Boot: it takes an authorization request from a
+        terminal, tokenizes the card, rejects duplicates, applies risk rules and asks the issuing bank, and approves on
+        the bank's behalf within set limits when the bank does not answer in time.
+        This console is connected to a running instance, so you can send test payments and follow them through
+        capture, the audit log and end-of-day settlement.
+      </p>
+    </div>
+    <div class="intro__links">
+      <a class="btn btn--primary" routerLink="/terminal">Send a payment</a>
+      <a class="btn" [href]="repoUrl" rel="noopener">Source on GitHub</a>
+    </div>
+  </header>
+
+  <div class="overview-grid">
+    <section class="panel" aria-labelledby="arch-h">
+      <div class="panel__header">
+        <h2 id="arch-h">How a payment moves</h2>
+        @if (warmUp.enabled) {
+          <p class="backend small" aria-live="polite">
+            <span class="muted">Demo backend:</span>
+            @for (s of warmUp.services(); track s.id) {
+              <span class="backend__item" [class]="'backend__item backend__item--' + s.status">
+                <span class="backend__dot" aria-hidden="true"></span>{{ s.label }} {{ statusWord(s.status) }}
+              </span>
+            }
+          </p>
+        }
+      </div>
+      <div class="panel__body">
+        <app-architecture-diagram />
+      </div>
+      <div class="note">
+        <p>
+          <strong>What this is not.</strong> A learning-grade model of a network switch, not a certified or PCI DSS
+          compliant system, and no real network's message specification is implemented. The demo uses only published
+          test card numbers, and nothing on this site accepts a typed card number.
+        </p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="try-h">
+      <div class="panel__header"><h2 id="try-h">Things to try</h2></div>
+      <ol class="try">
+        @for (s of steps; track s.title; let i = $index) {
+          <li class="try__item">
+            <span class="try__n num" aria-hidden="true">{{ i + 1 }}</span>
+            <div class="try__body">
+              <h3>
+                <a [routerLink]="s.link" [fragment]="s.fragment" [queryParams]="s.query">{{ s.title }}</a>
+              </h3>
+              <p class="muted">{{ s.text }}</p>
+            </div>
+          </li>
+        }
+      </ol>
+      <p class="byline small muted">
+        Built by <a [href]="authorUrl" rel="noopener">{{ authorHandle }}</a> ·
+        <a [href]="repoUrl" rel="noopener">github.com/mightbeanshuu/cardrail</a>
+      </p>
+    </section>
+  </div>
+</div>

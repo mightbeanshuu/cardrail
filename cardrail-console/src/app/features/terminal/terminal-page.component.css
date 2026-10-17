@@ -1,0 +1,16 @@
+.terminal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 6fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.small {
+  font-size: 12px;
+}
+
+@media (max-width: 960px) {
+  .terminal-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

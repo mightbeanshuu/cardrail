@@ -6,7 +6,17 @@ import { APP_CONFIG } from './core/config/app-config';
 export const devToolsEnabled: CanMatchFn = () => inject(APP_CONFIG).devTools;
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'authorizations' },
+  {
+    path: '',
+    pathMatch: 'full',
+    title: 'cardrail · card payment switch demo',
+    loadComponent: () => import('./features/overview/overview-page.component').then((m) => m.OverviewPageComponent),
+  },
+  {
+    path: 'terminal',
+    title: 'Terminal · cardrail',
+    loadComponent: () => import('./features/terminal/terminal-page.component').then((m) => m.TerminalPageComponent),
+  },
   {
     path: 'authorizations',
     loadChildren: () => import('./features/authorizations/authorizations.routes').then((m) => m.AUTHORIZATION_ROUTES),

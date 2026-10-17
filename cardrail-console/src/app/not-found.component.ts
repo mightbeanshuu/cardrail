@@ -8,7 +8,7 @@ import { RouterLink } from '@angular/router';
   template: `
     <div class="page">
       <h1 tabindex="-1">Page not found</h1>
-      <p>There is no console page at this address. <a routerLink="/authorizations">Go to authorizations</a>.</p>
+      <p>There is no console page at this address. <a routerLink="/">Go to the overview</a>.</p>
     </div>
   `,
 })

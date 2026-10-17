@@ -1,6 +1,22 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+.shell-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 10px var(--gutter);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
 }
 
 .skip-link {
@@ -63,6 +79,10 @@
   color: var(--text);
 }
 
+.nav a:focus-visible {
+  outline-offset: -2px;
+}
+
 .nav a.is-active {
   border-bottom-color: var(--accent);
   color: var(--text);
@@ -71,4 +91,26 @@
 
 main:focus {
   outline: none;
+}
+
+@media (max-width: 720px) {
+  .shell-header {
+    gap: 0 16px;
+    padding-top: 8px;
+  }
+
+  nav[aria-label='Primary'] {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav {
+    flex-wrap: nowrap;
+  }
+
+  .nav a {
+    padding: 10px 8px 9px;
+    white-space: nowrap;
+  }
 }

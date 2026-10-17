@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from '../../core/config/app-config';
+import { QUIET_ERRORS } from '../../core/http/http-context';
 
 /** Mirrors `SimulatedIssuerAdminController.FaultSettings`. */
 export interface FaultSettings {
@@ -10,14 +11,18 @@ export interface FaultSettings {
   readonly failureRate: number;
 }
 
-/** Dev profile only: the switch's simulated issuer (`/dev/issuer/faults`: GET, PUT, DELETE). */
+/**
+ * The switch's simulated issuer (`/dev/issuer/faults`: GET, PUT, DELETE). Exposed by the switch's
+ * `dev` and `demo` profiles only.
+ */
 @Injectable({ providedIn: 'root' })
 export class IssuerFaultsService {
   private readonly http = inject(HttpClient);
   private readonly url = `${inject(APP_CONFIG).switchBaseUrl}/dev/issuer/faults`;
 
-  current(): Observable<FaultSettings> {
-    return this.http.get<FaultSettings>(this.url);
+  /** `quiet`: the caller shows its own unavailable state, so failures do not raise the error banner. */
+  current(options: { quiet?: boolean } = {}): Observable<FaultSettings> {
+    return this.http.get<FaultSettings>(this.url, options.quiet ? { context: new HttpContext().set(QUIET_ERRORS, true) } : {});
   }
 
   set(settings: FaultSettings): Observable<FaultSettings> {

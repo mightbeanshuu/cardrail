@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
@@ -6,7 +6,7 @@ import { PROBLEM_HEADERS, provideTestHttp } from '../../../testing/test-provider
 import { ApiError } from '../errors/api-error';
 import { ErrorBannerService } from '../errors/error-banner.service';
 import { CORRELATION_ID_HEADER } from './correlation-id.interceptor';
-import { handledStatuses } from './http-context';
+import { QUIET_ERRORS, handledStatuses } from './http-context';
 
 describe('HTTP interceptors', () => {
   let http: HttpClient;
@@ -115,6 +115,41 @@ describe('HTTP interceptors', () => {
       expect(error.status).toBe(502);
       expect(error.title).toBe('Bad gateway');
       expect(error.detail).toBe('upstream down');
+    });
+
+    it('maps a 429 rate-limit problem to a plain "wait a few seconds" message', async () => {
+      const error = await failWith((req) =>
+        req.flush(
+          { type: 'https://cardrail.dev/problems/rate-limited', title: 'Too Many Requests', status: 429, detail: 'rate limit exceeded for 203.0.113.7' },
+          { status: 429, statusText: 'Too Many Requests', headers: PROBLEM_HEADERS },
+        ),
+      );
+      expect(error.isRateLimited).toBe(true);
+      expect(error.title).toBe('Too many requests');
+      expect(error.detail).toBe('Too many requests from your address. Wait a few seconds and try again.');
+      // The visitor's address from the server's detail is not echoed back.
+      expect(error.message).not.toContain('203.0.113.7');
+      expect(banner.entries()[0].error.detail).toContain('Wait a few seconds');
+    });
+
+    it('uses Retry-After seconds when the server sends them', async () => {
+      const error = await failWith((req) =>
+        req.flush({ title: 'Too Many Requests', status: 429 }, { status: 429, statusText: 'x', headers: { ...PROBLEM_HEADERS, 'Retry-After': '7' } }),
+      );
+      expect(error.detail).toBe('Too many requests from your address. Wait 7 seconds and try again.');
+    });
+
+    it('maps a 429 without a problem body the same way', async () => {
+      const error = await failWith((req) => req.flush('slow down', { status: 429, statusText: 'Too Many Requests' }));
+      expect(error.title).toBe('Too many requests');
+      expect(error.detail).toContain('from your address');
+    });
+
+    it('keeps failures of quiet requests out of the banner', async () => {
+      await failWith((req) => req.flush(null, { status: 503, statusText: 'x' }), {
+        context: new HttpContext().set(QUIET_ERRORS, true),
+      });
+      expect(banner.entries()).toEqual([]);
     });
 
     it('does not raise the banner for statuses the caller handles', async () => {

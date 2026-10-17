@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { ChipComponent } from '../../shared/status-chip.component';
 import { LoadState, asApiError } from '../../shared/load-state';
 import { formatUtc } from '../../shared/datetime';
@@ -12,12 +13,18 @@ interface Checked {
 
 @Component({
   selector: 'app-audit-page',
-  imports: [ChipComponent, DecimalPipe],
+  imports: [ChipComponent, DecimalPipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
       <div class="page__header">
-        <h1 tabindex="-1">Audit chain</h1>
+        <div class="page__heading">
+          <h1 tabindex="-1">Audit chain</h1>
+          <p class="page__lede">
+            Every state change in the switch is appended to a log where each record carries the hash of the one before
+            it. Editing or deleting any record breaks the chain from that point, which is what an auditor checks for.
+          </p>
+        </div>
       </div>
       <section class="panel" aria-labelledby="verify-h">
         <div class="panel__header">
@@ -28,8 +35,8 @@ interface Checked {
         </div>
         <div class="panel__body stack">
           <p class="muted">
-            Every state change in the switch is appended to a hash-chained audit log. Verification recomputes each
-            record's hash from its predecessor and reports the first record that does not match.
+            Verification recomputes each record's hash from its predecessor on the switch and reports the first record
+            that does not match.
           </p>
           <div aria-live="polite">
             @switch (state().status) {
@@ -39,6 +46,10 @@ interface Checked {
               @case ('error') {
                 <p>Verification could not be run. See the error above.</p>
               }
+            }
+            @if (state().status === 'idle') {
+              <p>Not run yet. Send a payment from the <a routerLink="/terminal">terminal</a> first if you want to see
+                the record count grow, then run verification.</p>
             }
             @if (checked(); as c) {
               @if (c.result.intact) {

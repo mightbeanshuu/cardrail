@@ -4,6 +4,7 @@ import { AppConfig } from '../app/core/config/app-config';
 export const environment: AppConfig = {
   switchBaseUrl: '',
   clearingBaseUrl: '/clearing',
+  warmUp: { enabled: true, switchHealthUrl: '/actuator/health', clearingHealthUrl: '/clearing-actuator/health' },
   devTools: true,
   locale: 'en-IN',
 };

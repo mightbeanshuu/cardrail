@@ -1,0 +1,104 @@
+<div class="page">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 tabindex="-1">Terminal</h1>
+      <p class="page__lede">
+        You are the card terminal. What you send here is the authorization request a merchant's bank forwards for a
+        card payment, and the answer is the ISO 8583 response code the till would print.
+      </p>
+    </div>
+  </header>
+
+  <div class="terminal-grid">
+    <section class="panel" aria-labelledby="request-h">
+      <div class="panel__header">
+        <h2 id="request-h">Request</h2>
+        <p class="muted small mono" title="ISO 8583 fields 41 and 32">Terminal {{ terminalId }} · acquirer {{ acquirerId }}</p>
+      </div>
+      <div class="panel__body">
+        <app-terminal-form [busy]="busy()" (send)="send($event)" />
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="response-h">
+      <div class="panel__header">
+        <h2 id="response-h">Response</h2>
+        @if (busy()) {
+          <p class="muted small" role="status">Waiting for the switch…</p>
+        }
+      </div>
+      <app-receipt [exchange]="latest()" [original]="original()" [busy]="busy()"
+                   (retransmit)="retransmit($event)" (conflicting)="conflicting($event)" />
+    </section>
+  </div>
+
+  @if (devTools) {
+    <section class="panel" id="stand-in" aria-labelledby="stand-in-h">
+      <div class="panel__header">
+        <h2 id="stand-in-h">Stand-in processing</h2>
+        <a class="small" routerLink="/dev/issuer">Issuer simulator</a>
+      </div>
+      <div class="panel__body">
+        <app-stand-in-panel (suggest)="fill($event)" />
+      </div>
+    </section>
+  }
+
+  <section class="panel" aria-labelledby="history-h">
+    <div class="panel__header">
+      <h2 id="history-h">This session</h2>
+      <button type="button" class="btn btn--sm btn--ghost" [disabled]="history().length === 0" (click)="clear()">Clear</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <caption class="sr-only">Requests sent from this terminal in this tab, newest first</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="num">#</th>
+            <th scope="col">Sent (UTC)</th>
+            <th scope="col">Kind</th>
+            <th scope="col">Card</th>
+            <th scope="col" class="num">Amount</th>
+            <th scope="col">MCC</th>
+            <th scope="col">Response</th>
+            <th scope="col">Stand-in</th>
+            <th scope="col" class="num">Latency</th>
+            <th scope="col">Authorization</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (x of history(); track x.seq) {
+            <tr>
+              <td class="num">{{ x.seq }}</td>
+              <td class="mono nowrap">{{ x.sentAt | utc }}</td>
+              <td>{{ kindLabel(x.kind) }}@if (x.originalSeq) { <span class="muted"> of #{{ x.originalSeq }}</span> }</td>
+              <td class="nowrap"><span class="mono">{{ x.card.maskedPan }}</span><span class="cell-sub">{{ x.card.label }}</span></td>
+              <td class="num">{{ x.amountMinor | money: x.currency }}</td>
+              <td class="mono">{{ x.merchant.mcc }}</td>
+              <td>
+                @if (x.response) {
+                  <app-response-code [code]="x.response.responseCode" />
+                } @else {
+                  <span class="muted">{{ x.error?.isRateLimited ? 'HTTP 429, rate limited' : 'No response (HTTP ' + (x.error?.status ?? 0) + ')' }}</span>
+                }
+              </td>
+              <td><app-stip-badge [standIn]="!!x.response?.standIn" /></td>
+              <td class="num">{{ x.latencyMs }} ms</td>
+              <td class="mono">
+                @if (x.response?.id; as id) {
+                  <a [routerLink]="['/authorizations', id]" [attr.aria-label]="'Authorization ' + id">{{ id.slice(0, 8) }}</a>
+                } @else {
+                  <span class="muted">not stored</span>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr class="table__state">
+              <td colspan="10"><p>Requests you send are listed here, so you can compare answers and open each one.</p></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

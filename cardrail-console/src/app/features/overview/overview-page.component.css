@@ -1,0 +1,149 @@
+.overview {
+  gap: 14px;
+}
+
+.intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.intro__text {
+  display: grid;
+  gap: 6px;
+  max-width: 88ch;
+}
+
+.intro h1 {
+  font-size: 22px;
+}
+
+.intro__kicker {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.intro__lede {
+  font-size: 14.5px;
+}
+
+.intro__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.intro__links .btn {
+  text-decoration: none;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.note {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+  font-size: 13px;
+}
+
+.backend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.backend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.backend__dot {
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--warning);
+  border-radius: 50%;
+}
+
+.backend__item--ready .backend__dot {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.backend__item--failed .backend__dot {
+  border-color: var(--danger);
+  background: var(--danger);
+  border-radius: 1px;
+}
+
+.try {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.try__item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.try__n {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.try__body {
+  display: grid;
+  gap: 2px;
+}
+
+.try__body h3 {
+  font-size: 14px;
+}
+
+.try__body h3 a {
+  text-decoration: none;
+}
+
+.try__body h3 a:hover {
+  text-decoration: underline;
+}
+
+.try__body p {
+  font-size: 13px;
+}
+
+.byline {
+  padding: 10px 14px;
+}
+
+.small {
+  font-size: 12px;
+}
+
+@media (max-width: 960px) {
+  .overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

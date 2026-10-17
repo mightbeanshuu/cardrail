@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { FaultSettings, IssuerFaultsService } from './issuer-faults.service';
 
 interface Preset {
@@ -20,17 +21,24 @@ const PRESETS: readonly Preset[] = [
   { label: 'Issuer failing', latencyMs: 0, failurePercent: 100, note: 'Every call fails; the circuit breaker opens.' },
 ];
 
-/** Dev only: issuer latency and failure injection, to demonstrate stand-in processing. */
+/** Issuer latency and failure injection, to demonstrate stand-in processing. */
 @Component({
   selector: 'app-issuer-simulator-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
       <div class="page__header">
-        <h1 tabindex="-1">Issuer simulator</h1>
-        <p class="page__subtitle">Dev profile only</p>
+        <div class="page__heading">
+          <h1 tabindex="-1">Issuer simulator</h1>
+          <p class="page__lede">
+            The switch talks to a simulated issuing bank. Slow it past the switch's time limit or make it fail, and
+            stand-in processing takes over: the cardholder still gets an answer while the bank is down.
+          </p>
+        </div>
+        <a class="btn" routerLink="/terminal" fragment="stand-in">Try it on the terminal</a>
       </div>
+      <p class="muted">These settings are shared by everyone using this demo right now. Restore defaults when you are done.</p>
 
       <section class="panel" aria-labelledby="current-h">
         <div class="panel__header">
@@ -48,7 +56,7 @@ const PRESETS: readonly Preset[] = [
           } @else if (unavailable()) {
             <p>
               The switch did not answer <code>/dev/issuer/faults</code>. It is only available when the switch runs with
-              the <code>dev</code> Spring profile.
+              the <code>dev</code> or <code>demo</code> Spring profile.
             </p>
           } @else {
             <p class="muted" role="status">Loading…</p>
@@ -122,7 +130,7 @@ export class IssuerSimulatorPageComponent {
 
   protected load(): void {
     this.busy.set(true);
-    this.faults.current().subscribe({
+    this.faults.current({ quiet: true }).subscribe({
       next: (s) => this.show(s),
       error: () => {
         this.busy.set(false);

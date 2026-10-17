@@ -8,6 +8,11 @@ import { problemInterceptor } from '../app/core/http/problem.interceptor';
 export const TEST_CONFIG: AppConfig = {
   switchBaseUrl: 'http://switch.test',
   clearingBaseUrl: 'http://clearing.test/v1',
+  warmUp: {
+    enabled: false,
+    switchHealthUrl: 'http://switch.test/actuator/health',
+    clearingHealthUrl: 'http://clearing.test/actuator/health',
+  },
   devTools: true,
   locale: 'en-IN',
 };
