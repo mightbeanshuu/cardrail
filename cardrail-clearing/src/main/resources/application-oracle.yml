@@ -1,0 +1,7 @@
+# Oracle Database Free (gvenzl/oracle-free) with an app user cardrail/cardrail on FREEPDB1.
+# SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD override these, as everywhere in Spring Boot.
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@//localhost:1521/FREEPDB1
+    username: cardrail
+    password: cardrail

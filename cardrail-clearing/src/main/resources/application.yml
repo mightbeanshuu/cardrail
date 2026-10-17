@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: cardrail-clearing
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cardrail_clearing
+    username: mac
+    password: ""
+    hikari:
+      maximum-pool-size: 10
+  flyway:
+    locations: classpath:db/migration/{vendor}
+    clean-disabled: true
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: always
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: cardrail-clearing
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      ack-mode: manual
+      # The switch's topics have 3 partitions; more consumers than partitions would sit idle.
+      concurrency: 3
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: cardrail-clearing
+
+cardrail:
+  web:
+    allowed-origins: http://localhost:4200
+  events:
+    topic-prefix: "cardrail."
+    dead-letter-topic: cardrail.clearing.dlt
+    dead-letter-partitions: 3
+    dead-letter-replicas: 1
+    retry:
+      max-retries: 4
+      initial-interval: 500ms
+      multiplier: 2.0
+      max-interval: 10s
+  clearing:
+    settlement-zone: Asia/Kolkata
+    cut-off: "23:00"
+  settlement:
+    chunk-size: 500
+    report-directory: settlement-reports
+    network-id: CARDRAIL

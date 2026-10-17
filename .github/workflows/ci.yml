@@ -6,6 +6,7 @@ on:
 
 jobs:
   verify:
+    name: build and test (PostgreSQL)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -31,13 +32,68 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - name: Create dev database
-        run: psql -h localhost -U mac -d cardrail_test -c "CREATE DATABASE cardrail"
+      - name: Create databases
+        run: |
+          for db in cardrail cardrail_clearing cardrail_clearing_test; do
+            psql -h localhost -U mac -d cardrail_test -c "CREATE DATABASE $db"
+          done
       - name: Build and test
         run: mvn -B verify
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: surefire-reports
+          name: surefire-reports-postgres
           path: "**/target/surefire-reports/"
+
+  clearing-oracle:
+    name: clearing service on Oracle Database Free
+    runs-on: ubuntu-latest
+    services:
+      oracle:
+        image: gvenzl/oracle-free:23-slim
+        env:
+          ORACLE_PASSWORD: oracle
+          APP_USER: cardrail
+          APP_USER_PASSWORD: cardrail
+        ports: ["1521:1521"]
+        options: >-
+          --health-cmd healthcheck.sh
+          --health-interval 10s --health-timeout 5s --health-retries 20
+    env:
+      CLEARING_DB: oracle
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//localhost:1521/FREEPDB1
+      SPRING_DATASOURCE_USERNAME: cardrail
+      SPRING_DATASOURCE_PASSWORD: cardrail
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Test clearing against Oracle
+        run: mvn -B -pl cardrail-clearing -am verify -Dsurefire.failIfNoSpecifiedTests=false
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports-oracle
+          path: "cardrail-clearing/target/surefire-reports/"
+
+  console:
+    name: Angular console
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cardrail-console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: cardrail-console/package-lock.json
+      - run: npm ci
+      - run: npx ng build
+      - run: npx ng test --watch=false

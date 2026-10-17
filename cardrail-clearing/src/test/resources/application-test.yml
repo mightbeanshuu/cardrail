@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cardrail_clearing_test
+  kafka:
+    listener:
+      concurrency: 1
+    consumer:
+      properties:
+        # Shorter than the default 45s so a test's consumer group settles quickly after a restart.
+        session.timeout.ms: 10000
+
+cardrail:
+  events:
+    dead-letter-partitions: 1
+    retry:
+      max-retries: 2
+      initial-interval: 50ms
+      multiplier: 1.0
+      max-interval: 50ms
+  settlement:
+    # Small enough that the test data spans several chunks.
+    chunk-size: 3
+    report-directory: target/settlement-reports
+
+logging:
+  level:
+    org.apache.kafka: WARN
+    kafka: WARN
+    org.apache.zookeeper: WARN
+    state.change.logger: WARN

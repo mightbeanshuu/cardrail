@@ -1,0 +1,13 @@
+{
+  "source": "Copied verbatim from docs/CONTRACTS.md, section 1 (Kafka events, switch to clearing). Update both together.",
+  "authorization.captured": {"eventType":"authorization.captured","authorizationId":"7b0d3c2e-3f7a-4d6e-9a1b-2c4d5e6f7a8b",
+ "status":"CAPTURED","responseCode":"00","authCode":"A1B2C3","standIn":false,
+ "token":"9999991234567890","maskedPan":"555555******4444","amountMinor":25000,"currency":356,
+ "capturedAmountMinor":20000,"mcc":"5411","merchantId":"MERCHANT000001","acquirerId":"123456",
+ "terminalId":"TERM0001","stan":"000123","rrn":"629112000123","occurredAt":"2026-10-18T09:15:30Z"},
+  "authorization.reversed": {"eventType":"authorization.reversed","authorizationId":"7b0d3c2e-3f7a-4d6e-9a1b-2c4d5e6f7a8b",
+ "status":"REVERSED","responseCode":"00","authCode":"A1B2C3","standIn":false,
+ "token":"9999991234567890","maskedPan":"555555******4444","amountMinor":25000,"currency":356,
+ "mcc":"5411","merchantId":"MERCHANT000001","acquirerId":"123456","terminalId":"TERM0001",
+ "stan":"000123","rrn":"629112000123","occurredAt":"2026-10-18T09:20:00Z"}
+}

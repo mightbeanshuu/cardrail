@@ -25,6 +25,7 @@
     <module>cardrail-gateway</module>
     <module>cardrail-loadgen</module>
     <module>cardrail-apisec</module>
+    <module>cardrail-clearing</module>
   </modules>
 
   <properties>
