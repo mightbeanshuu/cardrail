@@ -1,0 +1,126 @@
+spring:
+  application:
+    name: cardrail-switch
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cardrail
+    username: mac
+    password: ""
+    hikari:
+      maximum-pool-size: 20
+  flyway:
+    clean-disabled: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      # Fail fast so a Redis outage degrades the velocity check instead of stalling authorizations.
+      timeout: 200ms
+      connect-timeout: 200ms
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        # Redis being down degrades velocity checks but the switch keeps authorizing, so it must not
+        # take the instance out of the load balancer.
+        readiness:
+          include: readinessState, db
+  metrics:
+    tags:
+      application: cardrail-switch
+
+logging:
+  pattern:
+    correlation: "[cid=%X{correlationId:-} rrn=%X{rrn:-} stan=%X{stan:-} auth=%X{authorizationId:-}] "
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+
+cardrail:
+  scheduling:
+    enabled: true
+  tokenizer: dev
+  dev:
+    tokenizer:
+      key: ${CARDRAIL_DEV_TOKENIZER_KEY:dev-only-tokenizer-key-change-me-0123456789}
+  duplicates:
+    payload-hash-key: ${CARDRAIL_PAYLOAD_HASH_KEY:dev-only-payload-hash-key-change-me-0123456789}
+    in-flight-wait: 3s
+    poll-interval: 25ms
+  risk:
+    currencies:
+      "356":                                # INR
+        max-transaction-minor: 20000000     # 2,00,000.00
+        velocity-max-amount-minor: 50000000 # 5,00,000.00 per window
+      "840":                                # USD
+        max-transaction-minor: 500000       # 5,000.00
+        velocity-max-amount-minor: 1000000  # 10,000.00 per window
+    velocity:
+      window: 1h
+      max-count: 20
+      degraded-ratio: 0.5
+  issuer:
+    resilience:
+      timeout: 1500ms
+      sliding-window-size: 20
+      minimum-number-of-calls: 10
+      failure-rate-threshold: 50
+      wait-in-open-state: 30s
+      permitted-calls-in-half-open: 3
+    sim:
+      latency: 0ms
+      failure-rate: 0.0
+  holds:
+    expiry-days: 7
+    batch-size: 100
+    abandoned-after: 2m
+    sweep-interval: 5m
+  outbox:
+    publisher: log
+    batch-size: 100
+    max-attempts: 10
+    topic-prefix: "cardrail."
+    send-timeout: 5s
+    topic-partitions: 3
+    topic-replicas: 1
+    poll-interval: 1s
+
+---
+spring:
+  config:
+    activate:
+      on-profile: json
+logging:
+  structured:
+    format:
+      console: ecs
+    json:
+      customizer: dev.cardrail.sw.logging.PanMaskingJsonMembersCustomizer

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- After defaults.xml (which registers its own wEx) and before the appender include, because the
+         console pattern is parsed when its appender starts. Overriding the built-in names means no
+         logger, including third-party ones, can print a full PAN through the pattern layout. -->
+    <conversionRule conversionWord="m" class="dev.cardrail.sw.logging.PanMaskingMessageConverter"/>
+    <conversionRule conversionWord="msg" class="dev.cardrail.sw.logging.PanMaskingMessageConverter"/>
+    <conversionRule conversionWord="message" class="dev.cardrail.sw.logging.PanMaskingMessageConverter"/>
+    <conversionRule conversionWord="wEx" class="dev.cardrail.sw.logging.PanMaskingThrowableConverter"/>
+
+    <springProfile name="json">
+        <include resource="org/springframework/boot/logging/logback/structured-console-appender.xml"/>
+    </springProfile>
+    <springProfile name="!json">
+        <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
