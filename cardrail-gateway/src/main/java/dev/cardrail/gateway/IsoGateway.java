@@ -127,8 +127,9 @@ public final class IsoGateway implements AutoCloseable {
             SocketAddress remote = socket.getRemoteSocketAddress();
             if (connections.size() >= config.maxConnections()) {
                 LOG.log(WARNING, "rejecting {0}: {1} connections open", remote, connections.size());
-                closeQuietly(socket);
+                // Notify before closing, so anyone who observes the close also sees the rejection recorded.
                 listener.connectionRejected(remote);
+                closeQuietly(socket);
                 continue;
             }
             GatewayConnection connection;
